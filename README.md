@@ -66,7 +66,7 @@ target_link_libraries(your_target beb_ll)
 The API closely mirrors the Rust implementation in `src/ll.rs`. Key functions include:
 
 - **Encryption**: `beb_ll_encrypt_aes_gcm_256_v1_with_nonce()`
-- **Decryption**: `beb_ll_decrypt_aes_gcm_256_v1()`
+- **Decryption**: Low-level helpers such as `beb_ll_try_decrypt_aes_gcm_256()`, combined with the parsing functions.
 - **Parsing**: `beb_ll_decode_v1()`, `beb_ll_parse_*()` functions
 - **Encoding**: `beb_ll_encode_*()` functions
 

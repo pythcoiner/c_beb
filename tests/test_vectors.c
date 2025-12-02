@@ -1,4 +1,5 @@
 #include "../include/beb_ll.h"
+#include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -313,11 +314,40 @@ static int test_encrypted_backup(void) {
         return 1;
     }
 
-    beb_decrypt_result_t decrypt_result;
-    err = beb_ll_decrypt_aes_gcm_256_v1(
-        &key1, decode_result.individual_secrets, decode_result.secrets_count,
-        decode_result.cyphertext, decode_result.cyphertext_len,
-        decode_result.nonce, &decrypt_result);
+    /* Recover shared secret using public APIs and low-level primitives */
+    if (decode_result.secrets_count == 0) {
+        printf("  FAIL: No individual secrets in decoded backup\n");
+        beb_ll_decode_v1_result_free(&decode_result);
+        free(encrypted);
+        return 1;
+    }
+
+    /* Compute Si = SHA256(\"BEB_BACKUP_INDIVIDUAL_SECRET\" || key) */
+    SHA256_CTX ctx;
+    uint8_t si[32];
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, BEB_INDIVIDUAL_SECRET, strlen(BEB_INDIVIDUAL_SECRET));
+    SHA256_Update(&ctx, key1.data, sizeof(key1.data));
+    SHA256_Final(si, &ctx);
+
+    /* Recover secret: S = Ci XOR Si, using the first individual secret */
+    uint8_t secret[32];
+    beb_ll_error_t xor_err =
+        beb_ll_xor(decode_result.individual_secrets[0].data, si, secret);
+    if (xor_err != BEB_LL_ERROR_OK) {
+        printf("  FAIL: XOR failed: %s\n", beb_ll_error_string(xor_err));
+        beb_ll_decode_v1_result_free(&decode_result);
+        free(encrypted);
+        return 1;
+    }
+
+    /* Decrypt ciphertext using AES-GCM helper */
+    uint8_t *decrypted = NULL;
+    size_t decrypted_len = 0;
+    err = beb_ll_try_decrypt_aes_gcm_256(decode_result.cyphertext,
+                                         decode_result.cyphertext_len, secret,
+                                         decode_result.nonce, &decrypted,
+                                         &decrypted_len);
 
     if (err != BEB_LL_ERROR_OK) {
         printf("  FAIL: Decryption failed: %s\n", beb_ll_error_string(err));
@@ -326,16 +356,43 @@ static int test_encrypted_backup(void) {
         return 1;
     }
 
-    if (!bytes_equal(decrypt_result.data, decrypt_result.len, plaintext,
-                     plaintext_len)) {
-        printf("  FAIL: Decrypted plaintext mismatch\n");
-        beb_ll_decrypt_result_free(&decrypt_result);
+    /* Parse content metadata and verify payload */
+    beb_content_t decoded_content;
+    size_t offset = 0;
+    err = beb_ll_parse_content_metadata(decrypted, decrypted_len, &offset,
+                                        &decoded_content);
+    if (err != BEB_LL_ERROR_OK) {
+        printf("  FAIL: Content metadata parse failed: %s\n",
+               beb_ll_error_string(err));
+        beb_ll_content_free(&decoded_content);
+        free(decrypted);
         beb_ll_decode_v1_result_free(&decode_result);
         free(encrypted);
         return 1;
     }
 
-    beb_ll_decrypt_result_free(&decrypt_result);
+    if (decoded_content.type != BEB_CONTENT_NONE) {
+        printf("  FAIL: Unexpected content type: %d\n", decoded_content.type);
+        beb_ll_content_free(&decoded_content);
+        free(decrypted);
+        beb_ll_decode_v1_result_free(&decode_result);
+        free(encrypted);
+        return 1;
+    }
+
+    size_t decrypted_payload_len = decrypted_len - offset;
+    if (!bytes_equal(decrypted + offset, decrypted_payload_len, plaintext,
+                     plaintext_len)) {
+        printf("  FAIL: Decrypted plaintext mismatch\n");
+        beb_ll_content_free(&decoded_content);
+        free(decrypted);
+        beb_ll_decode_v1_result_free(&decode_result);
+        free(encrypted);
+        return 1;
+    }
+
+    beb_ll_content_free(&decoded_content);
+    free(decrypted);
     beb_ll_decode_v1_result_free(&decode_result);
     free(encrypted);
 

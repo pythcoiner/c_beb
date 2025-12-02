@@ -223,12 +223,6 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     const beb_pubkey_t *keys, size_t keys_count, const uint8_t *data,
     size_t data_len, const uint8_t nonce[12], uint8_t **out, size_t *out_len);
 
-beb_ll_error_t beb_ll_decrypt_aes_gcm_256_v1(
-    const beb_pubkey_t *key, const beb_secret_t *individual_secrets,
-    size_t individual_secrets_count, const uint8_t *cyphertext,
-    size_t cyphertext_len, const uint8_t nonce[12],
-    beb_decrypt_result_t *result_out);
-
 /* Memory management */
 void beb_ll_derivation_paths_free(beb_derivation_path_t *paths, size_t count);
 void beb_ll_secrets_free(beb_secret_t *secrets, size_t count);
