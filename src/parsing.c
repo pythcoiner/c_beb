@@ -51,6 +51,60 @@ beb_error_t beb_parse_encryption(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Free an array of derivation paths and their children arrays */
+static void beb_free_parsed_paths(beb_derivation_path_t *paths,
+                                  size_t paths_count) {
+    if (!paths) {
+        return;
+    }
+    for (size_t i = 0; i < paths_count; i++) {
+        free(paths[i].children);
+    }
+    free(paths);
+}
+
+/* Parse a single derivation path at the given offset */
+static beb_error_t beb_parse_single_derivation_path(
+    const uint8_t *bytes,
+    size_t bytes_len,
+    size_t *offset,
+    beb_derivation_path_t *out_path) {
+    beb_error_t err = beb_check_offset(*offset, bytes, bytes_len);
+    if (err != BEB_ERROR_OK) {
+        return err;
+    }
+
+    uint8_t child_count = bytes[(*offset)++];
+    if (child_count == 0) {
+        return BEB_ERROR_DERIV_PATH_EMPTY;
+    }
+
+    /* Check we have enough bytes for all children (4 bytes each) */
+    err = beb_check_offset_lookahead(*offset, bytes, bytes_len,
+                                     (size_t)child_count * 4);
+    if (err != BEB_ERROR_OK) {
+        return err;
+    }
+
+    uint32_t *children = malloc(sizeof(uint32_t) * child_count);
+    if (!children) {
+        return BEB_ERROR_DERIV_PATH_COUNT;
+    }
+
+    for (uint8_t j = 0; j < child_count; j++) {
+        uint32_t child = ((uint32_t)bytes[*offset] << 24) |
+                         ((uint32_t)bytes[*offset + 1] << 16) |
+                         ((uint32_t)bytes[*offset + 2] << 8) |
+                         ((uint32_t)bytes[*offset + 3]);
+        *offset += 4;
+        children[j] = child;
+    }
+
+    out_path->children = children;
+    out_path->count = child_count;
+    return BEB_ERROR_OK;
+}
+
 beb_error_t beb_parse_derivation_paths(const uint8_t *bytes,
                                        size_t bytes_len,
                                        size_t *offset_out,
@@ -76,55 +130,25 @@ beb_error_t beb_parse_derivation_paths(const uint8_t *bytes,
 
     if (count != 0) {
         for (uint8_t i = 0; i < count; i++) {
-            err = beb_check_offset(offset, bytes, bytes_len);
-            if (err != BEB_ERROR_OK) {
-                goto error;
-            }
-
-            uint8_t child_count = bytes[offset++];
-            if (child_count == 0) {
-                err = BEB_ERROR_DERIV_PATH_EMPTY;
-                goto error;
-            }
-
-            /* Check we have enough bytes */
-            err = beb_check_offset_lookahead(offset, bytes, bytes_len,
-                                             child_count * 4);
-            if (err != BEB_ERROR_OK) {
-                goto error;
-            }
-
-            /* Allocate children array */
-            uint32_t *children = malloc(sizeof(uint32_t) * child_count);
-            if (!children) {
-                err = BEB_ERROR_DERIV_PATH_COUNT;
-                goto error;
-            }
-
-            for (uint8_t j = 0; j < child_count; j++) {
-                uint32_t child = ((uint32_t)bytes[offset] << 24) |
-                                 ((uint32_t)bytes[offset + 1] << 16) |
-                                 ((uint32_t)bytes[offset + 2] << 8) |
-                                 ((uint32_t)bytes[offset + 3]);
-                offset += 4;
-                children[j] = child;
-            }
-
             /* Add to paths array (resize if needed) */
             if (paths_count >= capacity) {
                 capacity *= 2;
                 beb_derivation_path_t *new_paths = realloc(
                     paths, sizeof(beb_derivation_path_t) * capacity);
                 if (!new_paths) {
-                    free(children);
                     err = BEB_ERROR_DERIV_PATH_COUNT;
                     goto error;
                 }
                 paths = new_paths;
             }
 
-            paths[paths_count].children = children;
-            paths[paths_count].count = child_count;
+            /* Parse one derivation path into the next slot */
+            err = beb_parse_single_derivation_path(bytes, bytes_len, &offset,
+                                                   &paths[paths_count]);
+            if (err != BEB_ERROR_OK) {
+                goto error;
+            }
+
             paths_count++;
         }
     }
@@ -136,10 +160,7 @@ beb_error_t beb_parse_derivation_paths(const uint8_t *bytes,
 
 error:
     /* Free allocated paths */
-    for (size_t i = 0; i < paths_count; i++) {
-        free(paths[i].children);
-    }
-    free(paths);
+    beb_free_parsed_paths(paths, paths_count);
     return err;
 }
 
@@ -233,7 +254,6 @@ beb_error_t beb_parse_encrypted_payload(const uint8_t *bytes,
         return BEB_ERROR_VARINT;
     }
 
-    size_t varint_size = varint_offset - offset;
     offset = varint_offset;
 
     /* Check data length is reasonable (max u32) */
