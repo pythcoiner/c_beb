@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(beb_ll C)
+project(bnb C)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -17,7 +17,7 @@ set(SOURCES
     src/content.c
     src/encoding.c
     src/parsing.c
-    src/beb_ll.c
+    src/beb.c
 )
 
 # Find required libraries
@@ -69,21 +69,21 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 
 # Create static library
-add_library(beb_ll STATIC ${SOURCES})
+add_library(beb STATIC ${SOURCES})
 
 # Link libraries
-target_link_libraries(beb_ll
+target_link_libraries(beb
     ${OPENSSL_LIBRARIES}
     ${SECP256K1_LIBRARIES}
 )
 
 # Install targets
-install(TARGETS beb_ll
+install(TARGETS beb
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
 )
 
-install(FILES include/beb_ll.h
+install(FILES include/beb.h
     DESTINATION include
 )
 
@@ -111,29 +111,29 @@ if(BUILD_TESTING)
 
     # Unit tests
     add_executable(test_main tests/test_main.c)
-    target_link_libraries(test_main beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
-    add_test(NAME beb_ll_unit_tests COMMAND test_main)
-    set_tests_properties(beb_ll_unit_tests PROPERTIES
+    target_link_libraries(test_main beb ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
+    add_test(NAME beb_unit_tests COMMAND test_main)
+    set_tests_properties(beb_unit_tests PROPERTIES
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
     
     # Test vectors runner
     add_executable(test_vectors_runner tests/test_vectors.c)
-    target_link_libraries(test_vectors_runner beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
+    target_link_libraries(test_vectors_runner beb ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
 
     # Link against cJSON and define HAVE_CJSON now that we know it's available
     target_link_libraries(test_vectors_runner ${CJSON_LIBRARIES})
     target_include_directories(test_vectors_runner PRIVATE ${CJSON_INCLUDE_DIRS})
     target_compile_definitions(test_vectors_runner PRIVATE HAVE_CJSON)
     
-    add_test(NAME beb_ll_test_vectors COMMAND test_vectors_runner)
-    set_tests_properties(beb_ll_test_vectors PROPERTIES
+    add_test(NAME beb_test_vectors COMMAND test_vectors_runner)
+    set_tests_properties(beb_test_vectors PROPERTIES
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
 endif()
 
 # Print configuration summary
-message(STATUS "BEB LL Configuration:")
+message(STATUS "BEB Configuration:")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "  OpenSSL: ${OPENSSL_VERSION}")

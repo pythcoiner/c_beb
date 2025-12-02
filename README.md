@@ -42,7 +42,7 @@ cmake --build .
 **Note**: The libsecp256k1 submodule is required.
 
 This will create:
-- `libbeb_ll.a` - Static library
+- `libbeb.a` - Static library
 - `test_main` - Unit test executable (if BUILD_TESTING is ON)
 - `test_vectors_runner` - Test vectors executable (if BUILD_TESTING is ON)
 
@@ -85,24 +85,24 @@ cmake --build .
 Include the header file:
 
 ```c
-#include "beb_ll.h"
+#include "beb.h"
 ```
 
 Use CMake's find_package in your CMakeLists.txt:
 
 ```cmake
-find_package(beb_ll REQUIRED)
-target_link_libraries(your_target beb_ll)
+find_package(beb REQUIRED)
+target_link_libraries(your_target beb)
 ```
 
 ## API Overview
 
 The API closely mirrors the Rust implementation in `src/ll.rs`. Key functions include:
 
-- **Encryption**: `beb_ll_encrypt_aes_gcm_256_v1_with_nonce()`
-- **Decryption**: Low-level helpers such as `beb_ll_try_decrypt_aes_gcm_256()`, combined with the parsing functions.
-- **Parsing**: `beb_ll_decode_v1()`, `beb_ll_parse_*()` functions
-- **Encoding**: `beb_ll_encode_*()` functions
+- **Encryption**: `beb_encrypt_aes_gcm_256_v1_with_nonce()`
+- **Decryption**: Low-level helpers such as `beb_try_decrypt_aes_gcm_256()`, combined with the parsing functions.
+- **Parsing**: `beb_decode_v1()`, `beb_parse_*()` functions
+- **Encoding**: `beb_encode_*()` functions
 
 ## Testing
 

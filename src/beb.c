@@ -1,4 +1,4 @@
-#include "../include/beb_ll.h"
+#include "../include/beb.h"
 #include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -6,7 +6,7 @@
 #include <string.h>
 
 /* Memory management functions */
-void beb_ll_derivation_paths_free(beb_derivation_path_t *paths, size_t count) {
+void beb_derivation_paths_free(beb_derivation_path_t *paths, size_t count) {
     if (paths) {
         for (size_t i = 0; i < count; i++) {
             free(paths[i].children);
@@ -15,16 +15,16 @@ void beb_ll_derivation_paths_free(beb_derivation_path_t *paths, size_t count) {
     }
 }
 
-void beb_ll_secrets_free(beb_secret_t *secrets, size_t count) {
+void beb_secrets_free(beb_secret_t *secrets, size_t count) {
     if (secrets) {
         free(secrets);
     }
 }
 
-void beb_ll_decode_v1_result_free(beb_decode_v1_result_t *result) {
+void beb_decode_v1_result_free(beb_decode_v1_result_t *result) {
     if (result) {
-        beb_ll_derivation_paths_free(result->paths, result->paths_count);
-        beb_ll_secrets_free(result->individual_secrets, result->secrets_count);
+        beb_derivation_paths_free(result->paths, result->paths_count);
+        beb_secrets_free(result->individual_secrets, result->secrets_count);
         if (result->cyphertext) {
             free(result->cyphertext);
         }
@@ -32,9 +32,9 @@ void beb_ll_decode_v1_result_free(beb_decode_v1_result_t *result) {
     }
 }
 
-void beb_ll_decrypt_result_free(beb_decrypt_result_t *result) {
+void beb_decrypt_result_free(beb_decrypt_result_t *result) {
     if (result) {
-        beb_ll_content_free(&result->content);
+        beb_content_free(&result->content);
         if (result->data) {
             free(result->data);
         }
@@ -53,7 +53,7 @@ static bool is_bip341_nums(const beb_pubkey_t *key) {
     return memcmp(key->data, BEB_BIP341_NUMS_PUBKEY, 33) == 0;
 }
 
-beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
+beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     const beb_derivation_path_t *derivation_paths,
     size_t derivation_paths_count, const beb_content_t *content_metadata,
     const beb_pubkey_t *keys, size_t keys_count, const uint8_t *data,
@@ -61,7 +61,7 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     /* Filter out BIP341 NUMS and duplicates, then sort */
     beb_pubkey_t *filtered_keys = malloc(sizeof(beb_pubkey_t) * keys_count);
     if (!filtered_keys) {
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     size_t filtered_count = 0;
@@ -83,7 +83,7 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
 
     if (filtered_count == 0 || filtered_count > 255) {
         free(filtered_keys);
-        return BEB_LL_ERROR_KEY_COUNT;
+        return BEB_ERROR_KEY_COUNT;
     }
 
     /* Sort keys */
@@ -98,7 +98,7 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
                                 derivation_paths_count);
         if (!filtered_paths) {
             free(filtered_keys);
-            return BEB_LL_ERROR_DERIV_PATH_COUNT;
+            return BEB_ERROR_DERIV_PATH_COUNT;
         }
 
         for (size_t i = 0; i < derivation_paths_count; i++) {
@@ -126,7 +126,7 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
                     }
                     free(filtered_paths);
                     free(filtered_keys);
-                    return BEB_LL_ERROR_DERIV_PATH_COUNT;
+                    return BEB_ERROR_DERIV_PATH_COUNT;
                 }
                 memcpy(filtered_paths[filtered_paths_count].children,
                        derivation_paths[i].children,
@@ -137,42 +137,42 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     }
 
     if (filtered_paths_count > 255) {
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
-        return BEB_LL_ERROR_DERIV_PATH_COUNT;
+        return BEB_ERROR_DERIV_PATH_COUNT;
     }
 
     /* Validate data length */
     if (data_len == 0 || data_len > UINT32_MAX) {
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
-        return BEB_LL_ERROR_DATA_LENGTH;
+        return BEB_ERROR_DATA_LENGTH;
     }
 
     /* Encode content metadata */
     uint8_t *content_bytes = NULL;
     size_t content_len = 0;
-    beb_ll_error_t err = beb_ll_encode_content(content_metadata, &content_bytes,
+    beb_error_t err = beb_encode_content(content_metadata, &content_bytes,
                                                &content_len);
-    if (err != BEB_LL_ERROR_OK) {
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+    if (err != BEB_ERROR_OK) {
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
 
     if (content_len == 0) {
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
-        return BEB_LL_ERROR_CONTENT_METADATA;
+        return BEB_ERROR_CONTENT_METADATA;
     }
 
     /* Compute decryption secret */
     uint8_t secret[32];
-    err = beb_ll_decryption_secret(filtered_keys, filtered_count, secret);
-    if (err != BEB_LL_ERROR_OK) {
+    err = beb_decryption_secret(filtered_keys, filtered_count, secret);
+    if (err != BEB_ERROR_OK) {
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
@@ -180,12 +180,12 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     /* Generate individual secrets */
     beb_secret_t *individual_secrets = NULL;
     size_t individual_secrets_count = 0;
-    err = beb_ll_individual_secrets(secret, filtered_keys, filtered_count,
+    err = beb_individual_secrets(secret, filtered_keys, filtered_count,
                                     &individual_secrets,
                                     &individual_secrets_count);
-    if (err != BEB_LL_ERROR_OK) {
+    if (err != BEB_ERROR_OK) {
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
@@ -193,12 +193,12 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     /* Encode derivation paths */
     uint8_t *encoded_paths = NULL;
     size_t encoded_paths_len = 0;
-    err = beb_ll_encode_derivation_paths(filtered_paths, filtered_paths_count,
+    err = beb_encode_derivation_paths(filtered_paths, filtered_paths_count,
                                          &encoded_paths, &encoded_paths_len);
-    if (err != BEB_LL_ERROR_OK) {
-        beb_ll_secrets_free(individual_secrets, individual_secrets_count);
+    if (err != BEB_ERROR_OK) {
+        beb_secrets_free(individual_secrets, individual_secrets_count);
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
@@ -206,14 +206,14 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     /* Encode individual secrets */
     uint8_t *encoded_secrets = NULL;
     size_t encoded_secrets_len = 0;
-    err = beb_ll_encode_individual_secrets(
+    err = beb_encode_individual_secrets(
         individual_secrets, individual_secrets_count, &encoded_secrets,
         &encoded_secrets_len);
-    if (err != BEB_LL_ERROR_OK) {
+    if (err != BEB_ERROR_OK) {
         free(encoded_paths);
-        beb_ll_secrets_free(individual_secrets, individual_secrets_count);
+        beb_secrets_free(individual_secrets, individual_secrets_count);
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
@@ -224,11 +224,11 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     if (!payload) {
         free(encoded_secrets);
         free(encoded_paths);
-        beb_ll_secrets_free(individual_secrets, individual_secrets_count);
+        beb_secrets_free(individual_secrets, individual_secrets_count);
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
     memcpy(payload, content_bytes, content_len);
     memcpy(payload + content_len, data, data_len);
@@ -236,15 +236,15 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     /* Encrypt payload */
     uint8_t *ciphertext = NULL;
     size_t ciphertext_len = 0;
-    err = beb_ll_encrypt_with_nonce(secret, payload, payload_len, nonce,
+    err = beb_encrypt_with_nonce(secret, payload, payload_len, nonce,
                                     &ciphertext, &ciphertext_len);
     free(payload);
-    if (err != BEB_LL_ERROR_OK) {
+    if (err != BEB_ERROR_OK) {
         free(encoded_secrets);
         free(encoded_paths);
-        beb_ll_secrets_free(individual_secrets, individual_secrets_count);
+        beb_secrets_free(individual_secrets, individual_secrets_count);
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
@@ -252,22 +252,22 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     /* Encode encrypted payload */
     uint8_t *encrypted_payload = NULL;
     size_t encrypted_payload_len = 0;
-    err = beb_ll_encode_encrypted_payload(nonce, ciphertext, ciphertext_len,
+    err = beb_encode_encrypted_payload(nonce, ciphertext, ciphertext_len,
                                           &encrypted_payload,
                                           &encrypted_payload_len);
     free(ciphertext);
-    if (err != BEB_LL_ERROR_OK) {
+    if (err != BEB_ERROR_OK) {
         free(encoded_secrets);
         free(encoded_paths);
-        beb_ll_secrets_free(individual_secrets, individual_secrets_count);
+        beb_secrets_free(individual_secrets, individual_secrets_count);
         free(content_bytes);
-        beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+        beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
         return err;
     }
 
     /* Encode v1 format */
-    err = beb_ll_encode_v1(1, encoded_paths, encoded_paths_len, encoded_secrets,
+    err = beb_encode_v1(1, encoded_paths, encoded_paths_len, encoded_secrets,
                            encoded_secrets_len, 1, encrypted_payload,
                            encrypted_payload_len, out, out_len);
 
@@ -275,9 +275,9 @@ beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
     free(encrypted_payload);
     free(encoded_secrets);
     free(encoded_paths);
-    beb_ll_secrets_free(individual_secrets, individual_secrets_count);
+    beb_secrets_free(individual_secrets, individual_secrets_count);
     free(content_bytes);
-    beb_ll_derivation_paths_free(filtered_paths, filtered_paths_count);
+    beb_derivation_paths_free(filtered_paths, filtered_paths_count);
     free(filtered_keys);
 
     return err;

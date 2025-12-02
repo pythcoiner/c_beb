@@ -1,4 +1,4 @@
-#include "../include/beb_ll.h"
+#include "../include/beb.h"
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
@@ -28,16 +28,16 @@ static bool is_bip341_nums(const beb_pubkey_t *key) {
     return memcmp(key->data, BEB_BIP341_NUMS_PUBKEY, sizeof(key->data)) == 0;
 }
 
-beb_ll_error_t beb_ll_decryption_secret(const beb_pubkey_t *keys,
+beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
                                         size_t keys_count,
                                         uint8_t secret_out[32]) {
     if (keys_count == 0) {
-        return BEB_LL_ERROR_KEY_COUNT;
+        return BEB_ERROR_KEY_COUNT;
     }
 
     beb_pubkey_t *filtered_keys = malloc(sizeof(beb_pubkey_t) * keys_count);
     if (!filtered_keys) {
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     size_t filtered_count = 0;
@@ -59,7 +59,7 @@ beb_ll_error_t beb_ll_decryption_secret(const beb_pubkey_t *keys,
 
     if (filtered_count == 0 || filtered_count > 255) {
         free(filtered_keys);
-        return BEB_LL_ERROR_KEY_COUNT;
+        return BEB_ERROR_KEY_COUNT;
     }
 
     qsort(filtered_keys, filtered_count, sizeof(beb_pubkey_t), compare_pubkeys);
@@ -77,10 +77,10 @@ beb_ll_error_t beb_ll_decryption_secret(const beb_pubkey_t *keys,
     free(filtered_keys);
 
     SHA256_Final(secret_out, &ctx);
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_individual_secret(const uint8_t secret[32],
+beb_error_t beb_individual_secret(const uint8_t secret[32],
                                         const beb_pubkey_t *key,
                                         uint8_t individual_secret_out[32]) {
     SHA256_CTX ctx;
@@ -97,27 +97,27 @@ beb_ll_error_t beb_ll_individual_secret(const uint8_t secret[32],
     SHA256_Final(si, &ctx);
 
     /* XOR secret with si */
-    return beb_ll_xor(secret, si, individual_secret_out);
+    return beb_xor(secret, si, individual_secret_out);
 }
 
-beb_ll_error_t beb_ll_individual_secrets(const uint8_t secret[32],
+beb_error_t beb_individual_secrets(const uint8_t secret[32],
                                          const beb_pubkey_t *keys,
                                          size_t keys_count,
                                          beb_secret_t **secrets_out,
                                          size_t *secrets_count_out) {
     if (keys_count == 0 || keys_count > 255) {
-        return BEB_LL_ERROR_KEY_COUNT;
+        return BEB_ERROR_KEY_COUNT;
     }
 
     beb_secret_t *secrets = malloc(sizeof(beb_secret_t) * keys_count);
     if (!secrets) {
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     for (size_t i = 0; i < keys_count; i++) {
-        beb_ll_error_t err = beb_ll_individual_secret(secret, &keys[i],
+        beb_error_t err = beb_individual_secret(secret, &keys[i],
                                                       secrets[i].data);
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             free(secrets);
             return err;
         }
@@ -125,27 +125,27 @@ beb_ll_error_t beb_ll_individual_secrets(const uint8_t secret[32],
 
     *secrets_out = secrets;
     *secrets_count_out = keys_count;
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
+beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
                                          const uint8_t *data, size_t data_len,
                                          const uint8_t nonce[12],
                                          uint8_t **ciphertext_out,
                                          size_t *ciphertext_len_out) {
     if (data_len == 0) {
-        return BEB_LL_ERROR_EMPTY_BYTES;
+        return BEB_ERROR_EMPTY_BYTES;
     }
 
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     /* Initialize encryption */
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, secret, nonce) != 1) {
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     /* Allocate output buffer (plaintext + 16 bytes for GCM tag + some extra for
@@ -154,7 +154,7 @@ beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
     uint8_t *ciphertext = malloc(out_len);
     if (!ciphertext) {
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     int len;
@@ -164,7 +164,7 @@ beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
     if (EVP_EncryptUpdate(ctx, ciphertext, &len, data, (int)data_len) != 1) {
         free(ciphertext);
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     /* Finalize encryption (in GCM mode this should output 0 bytes, but check
@@ -172,7 +172,7 @@ beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
     if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &final_len) != 1) {
         free(ciphertext);
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     /* Get the authentication tag */
@@ -180,7 +180,7 @@ beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
                             ciphertext + len + final_len) != 1) {
         free(ciphertext);
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_ENCRYPT;
+        return BEB_ERROR_ENCRYPT;
     }
 
     /* Total ciphertext length: encrypted data from Update + any from Final +
@@ -194,34 +194,34 @@ beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
 
     *ciphertext_out = ciphertext;
     *ciphertext_len_out = total_len;
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
+beb_error_t beb_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
                                               size_t ciphertext_len,
                                               const uint8_t secret[32],
                                               const uint8_t nonce[12],
                                               uint8_t **plaintext_out,
                                               size_t *plaintext_len_out) {
     if (ciphertext_len < 16) {
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     /* In GCM, last 16 bytes are the tag, rest is encrypted data */
     size_t encrypted_len = ciphertext_len - 16;
     if (encrypted_len == 0) {
-        return BEB_LL_ERROR_EMPTY_BYTES;
+        return BEB_ERROR_EMPTY_BYTES;
     }
 
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     /* Initialize decryption */
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, secret, nonce) != 1) {
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     /* Allocate output buffer (encrypted_len + block size for potential Final
@@ -231,7 +231,7 @@ beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
     uint8_t *plaintext = malloc(plaintext_buf_len);
     if (!plaintext) {
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     int len;
@@ -242,7 +242,7 @@ beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
                           (int)encrypted_len) != 1) {
         free(plaintext);
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     /* Set the authentication tag */
@@ -250,14 +250,14 @@ beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
                             (void *)(ciphertext + encrypted_len)) != 1) {
         free(plaintext);
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     /* Finalize decryption and verify tag */
     if (EVP_DecryptFinal_ex(ctx, plaintext + len, &final_len) != 1) {
         free(plaintext);
         EVP_CIPHER_CTX_free(ctx);
-        return BEB_LL_ERROR_DECRYPT;
+        return BEB_ERROR_DECRYPT;
     }
 
     /* Total plaintext length */
@@ -267,5 +267,5 @@ beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
 
     *plaintext_out = plaintext;
     *plaintext_len_out = total_plaintext_len;
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }

@@ -1,4 +1,4 @@
-#include "../include/beb_ll.h"
+#include "../include/beb.h"
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -8,129 +8,129 @@
 #define SIZE_MAX ((size_t)-1)
 #endif
 
-const char *beb_ll_error_string(beb_ll_error_t error) {
+const char *beb_error_string(beb_error_t error) {
     switch (error) {
-    case BEB_LL_ERROR_OK:
+    case BEB_ERROR_OK:
         return "OK";
-    case BEB_LL_ERROR_KEY_COUNT:
+    case BEB_ERROR_KEY_COUNT:
         return "KeyCount";
-    case BEB_LL_ERROR_DERIV_PATH_COUNT:
+    case BEB_ERROR_DERIV_PATH_COUNT:
         return "DerivPathCount";
-    case BEB_LL_ERROR_DERIV_PATH_LENGTH:
+    case BEB_ERROR_DERIV_PATH_LENGTH:
         return "DerivPathLength";
-    case BEB_LL_ERROR_DERIV_PATH_EMPTY:
+    case BEB_ERROR_DERIV_PATH_EMPTY:
         return "DerivPathEmpty";
-    case BEB_LL_ERROR_DATA_LENGTH:
+    case BEB_ERROR_DATA_LENGTH:
         return "DataLength";
-    case BEB_LL_ERROR_ENCRYPT:
+    case BEB_ERROR_ENCRYPT:
         return "Encrypt";
-    case BEB_LL_ERROR_DECRYPT:
+    case BEB_ERROR_DECRYPT:
         return "Decrypt";
-    case BEB_LL_ERROR_CORRUPTED:
+    case BEB_ERROR_CORRUPTED:
         return "Corrupted";
-    case BEB_LL_ERROR_VERSION:
+    case BEB_ERROR_VERSION:
         return "Version";
-    case BEB_LL_ERROR_MAGIC:
+    case BEB_ERROR_MAGIC:
         return "Magic";
-    case BEB_LL_ERROR_VARINT:
+    case BEB_ERROR_VARINT:
         return "VarInt";
-    case BEB_LL_ERROR_WRONG_KEY:
+    case BEB_ERROR_WRONG_KEY:
         return "WrongKey";
-    case BEB_LL_ERROR_INDIVIDUAL_SECRETS_EMPTY:
+    case BEB_ERROR_INDIVIDUAL_SECRETS_EMPTY:
         return "IndividualSecretsEmpty";
-    case BEB_LL_ERROR_INDIVIDUAL_SECRETS_LENGTH:
+    case BEB_ERROR_INDIVIDUAL_SECRETS_LENGTH:
         return "IndividualSecretsLength";
-    case BEB_LL_ERROR_CYPHERTEXT_EMPTY:
+    case BEB_ERROR_CYPHERTEXT_EMPTY:
         return "CypherTextEmpty";
-    case BEB_LL_ERROR_CYPHERTEXT_LENGTH:
+    case BEB_ERROR_CYPHERTEXT_LENGTH:
         return "CypherTextLength";
-    case BEB_LL_ERROR_CONTENT_METADATA:
+    case BEB_ERROR_CONTENT_METADATA:
         return "ContentMetadata";
-    case BEB_LL_ERROR_ENCRYPTION:
+    case BEB_ERROR_ENCRYPTION:
         return "Encryption";
-    case BEB_LL_ERROR_OFFSET_OVERFLOW:
+    case BEB_ERROR_OFFSET_OVERFLOW:
         return "OffsetOverflow";
-    case BEB_LL_ERROR_EMPTY_BYTES:
+    case BEB_ERROR_EMPTY_BYTES:
         return "EmptyBytes";
-    case BEB_LL_ERROR_INCREMENT:
+    case BEB_ERROR_INCREMENT:
         return "Increment";
-    case BEB_LL_ERROR_CONTENT_METADATA_EMPTY:
+    case BEB_ERROR_CONTENT_METADATA_EMPTY:
         return "ContentMetadataEmpty";
-    case BEB_LL_ERROR_CONTENT_RESERVED:
+    case BEB_ERROR_CONTENT_RESERVED:
         return "ContentReserved";
     default:
         return "Unknown";
     }
 }
 
-beb_ll_error_t beb_ll_xor(const uint8_t a[32], const uint8_t b[32],
+beb_error_t beb_xor(const uint8_t a[32], const uint8_t b[32],
                           uint8_t out[32]) {
     for (size_t i = 0; i < 32; i++) {
         out[i] = a[i] ^ b[i];
     }
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_check_offset(size_t offset, const uint8_t *bytes,
+beb_error_t beb_check_offset(size_t offset, const uint8_t *bytes,
                                    size_t bytes_len) {
     (void)bytes; /* unused parameter */
     if (bytes_len <= offset) {
-        return BEB_LL_ERROR_CORRUPTED;
+        return BEB_ERROR_CORRUPTED;
     }
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_check_offset_lookahead(size_t offset,
+beb_error_t beb_check_offset_lookahead(size_t offset,
                                              const uint8_t *bytes,
                                              size_t bytes_len,
                                              size_t lookahead) {
     (void)bytes; /* unused parameter */
     if (lookahead == 0) {
-        return BEB_LL_ERROR_INCREMENT;
+        return BEB_ERROR_INCREMENT;
     }
     /* Check for overflow: offset + lookahead > SIZE_MAX */
     if (lookahead > SIZE_MAX - offset) {
-        return BEB_LL_ERROR_INCREMENT;
+        return BEB_ERROR_INCREMENT;
     }
     size_t target = offset + lookahead;
     if (target == 0) {
-        return BEB_LL_ERROR_INCREMENT;
+        return BEB_ERROR_INCREMENT;
     }
     target -= 1;
     if (bytes_len <= target) {
-        return BEB_LL_ERROR_CORRUPTED;
+        return BEB_ERROR_CORRUPTED;
     }
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_init_offset(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_init_offset(const uint8_t *bytes, size_t bytes_len,
                                   size_t value, size_t *out) {
-    beb_ll_error_t err = beb_ll_check_offset(value, bytes, bytes_len);
-    if (err != BEB_LL_ERROR_OK) {
+    beb_error_t err = beb_check_offset(value, bytes, bytes_len);
+    if (err != BEB_ERROR_OK) {
         return err;
     }
     *out = value;
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_increment_offset(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_increment_offset(const uint8_t *bytes, size_t bytes_len,
                                        size_t offset, size_t incr,
                                        size_t *out) {
     /* Check for overflow: offset + incr > SIZE_MAX */
     if (incr > SIZE_MAX - offset) {
-        return BEB_LL_ERROR_OFFSET_OVERFLOW;
+        return BEB_ERROR_OFFSET_OVERFLOW;
     }
     size_t new_offset = offset + incr;
-    beb_ll_error_t err = beb_ll_check_offset(new_offset, bytes, bytes_len);
-    if (err != BEB_LL_ERROR_OK) {
+    beb_error_t err = beb_check_offset(new_offset, bytes, bytes_len);
+    if (err != BEB_ERROR_OK) {
         return err;
     }
     *out = new_offset;
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
 /* VarInt encoding/decoding (Bitcoin consensus format) */
-size_t beb_ll_varint_encode_size(uint64_t value) {
+size_t beb_varint_encode_size(uint64_t value) {
     if (value < 0xfd) {
         return 1;
     } else if (value <= 0xffff) {
@@ -142,11 +142,11 @@ size_t beb_ll_varint_encode_size(uint64_t value) {
     }
 }
 
-beb_ll_error_t beb_ll_varint_encode(uint64_t value, uint8_t *out,
+beb_error_t beb_varint_encode(uint64_t value, uint8_t *out,
                                     size_t out_len, size_t *written) {
-    size_t size = beb_ll_varint_encode_size(value);
+    size_t size = beb_varint_encode_size(value);
     if (out_len < size) {
-        return BEB_LL_ERROR_VARINT;
+        return BEB_ERROR_VARINT;
     }
 
     if (value < 0xfd) {
@@ -176,13 +176,13 @@ beb_ll_error_t beb_ll_varint_encode(uint64_t value, uint8_t *out,
         out[8] = (uint8_t)((value >> 56) & 0xff);
         *written = 9;
     }
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }
 
-beb_ll_error_t beb_ll_varint_decode(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_varint_decode(const uint8_t *bytes, size_t bytes_len,
                                     size_t *offset, uint64_t *value) {
     if (bytes_len <= *offset) {
-        return BEB_LL_ERROR_VARINT;
+        return BEB_ERROR_VARINT;
     }
 
     uint8_t first = bytes[*offset];
@@ -191,14 +191,14 @@ beb_ll_error_t beb_ll_varint_decode(const uint8_t *bytes, size_t bytes_len,
         *offset += 1;
     } else if (first == 0xfd) {
         if (bytes_len < *offset + 3) {
-            return BEB_LL_ERROR_VARINT;
+            return BEB_ERROR_VARINT;
         }
         *value = ((uint64_t)bytes[*offset + 1]) |
                  ((uint64_t)bytes[*offset + 2] << 8);
         *offset += 3;
     } else if (first == 0xfe) {
         if (bytes_len < *offset + 5) {
-            return BEB_LL_ERROR_VARINT;
+            return BEB_ERROR_VARINT;
         }
         *value = ((uint64_t)bytes[*offset + 1]) |
                  ((uint64_t)bytes[*offset + 2] << 8) |
@@ -207,7 +207,7 @@ beb_ll_error_t beb_ll_varint_decode(const uint8_t *bytes, size_t bytes_len,
         *offset += 5;
     } else {
         if (bytes_len < *offset + 9) {
-            return BEB_LL_ERROR_VARINT;
+            return BEB_ERROR_VARINT;
         }
         *value = ((uint64_t)bytes[*offset + 1]) |
                  ((uint64_t)bytes[*offset + 2] << 8) |
@@ -219,5 +219,5 @@ beb_ll_error_t beb_ll_varint_decode(const uint8_t *bytes, size_t bytes_len,
                  ((uint64_t)bytes[*offset + 8] << 56);
         *offset += 9;
     }
-    return BEB_LL_ERROR_OK;
+    return BEB_ERROR_OK;
 }

@@ -1,4 +1,4 @@
-#include "../include/beb_ll.h"
+#include "../include/beb.h"
 #include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -709,12 +709,12 @@ static int test_aesgcm256_encryption_json(void) {
 
         uint8_t *ciphertext = NULL;
         size_t ciphertext_len = 0;
-        beb_ll_error_t err = beb_ll_encrypt_with_nonce(
+        beb_error_t err = beb_encrypt_with_nonce(
             v->secret, v->plaintext, v->plaintext_len, v->nonce, &ciphertext,
             &ciphertext_len);
 
         if (!v->expect_success) {
-            if (err == BEB_LL_ERROR_OK) {
+            if (err == BEB_ERROR_OK) {
                 printf("  Case %zu: %s\n", i + 1,
                        v->description ? v->description : "(no description)");
                 printf(
@@ -725,11 +725,11 @@ static int test_aesgcm256_encryption_json(void) {
             continue;
         }
 
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Encryption failed: %s\n",
-                   beb_ll_error_string(err));
+                   beb_error_string(err));
             failures++;
             continue;
         }
@@ -758,15 +758,15 @@ static int test_aesgcm256_encryption_json(void) {
 
         uint8_t *decrypted = NULL;
         size_t decrypted_len = 0;
-        err = beb_ll_try_decrypt_aes_gcm_256(ciphertext, ciphertext_len,
+        err = beb_try_decrypt_aes_gcm_256(ciphertext, ciphertext_len,
                                              v->secret, v->nonce, &decrypted,
                                              &decrypted_len);
 
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Decryption failed: %s\n",
-                   beb_ll_error_string(err));
+                   beb_error_string(err));
             free(ciphertext);
             failures++;
             continue;
@@ -976,13 +976,13 @@ static int test_encryption_secret_json(void) {
         enc_secret_vector_t *v = &vecs[i];
 
         uint8_t secret[32];
-        beb_ll_error_t err = beb_ll_decryption_secret(v->keys, v->keys_count,
+        beb_error_t err = beb_decryption_secret(v->keys, v->keys_count,
                                                       secret);
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: decryption_secret failed: %s\n",
-                   beb_ll_error_string(err));
+                   beb_error_string(err));
             failures++;
             continue;
         }
@@ -1018,13 +1018,13 @@ static int test_encryption_secret_json(void) {
         size_t computed_count = 0;
         bool indiv_err = false;
         for (size_t j = 0; j < v->keys_count; j++) {
-            beb_ll_error_t indiv = beb_ll_individual_secret(
+            beb_error_t indiv = beb_individual_secret(
                 secret, &v->keys[j], computed + computed_count * 32);
-            if (indiv != BEB_LL_ERROR_OK) {
+            if (indiv != BEB_ERROR_OK) {
                 printf("  Case %zu: %s\n", i + 1,
                        v->description ? v->description : "(no description)");
                 printf("    FAIL: individual_secret failed: %s\n",
-                       beb_ll_error_string(indiv));
+                       beb_error_string(indiv));
                 failures++;
                 indiv_err = true;
                 break;
@@ -1421,13 +1421,13 @@ static int test_encrypted_backup_json(void) {
 
         beb_content_t content;
         size_t content_offset = 0;
-        beb_ll_error_t err = beb_ll_parse_content_metadata(
+        beb_error_t err = beb_parse_content_metadata(
             v->content, v->content_len, &content_offset, &content);
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Content parse failed: %s\n",
-                   beb_ll_error_string(err));
+                   beb_error_string(err));
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1440,17 +1440,17 @@ static int test_encrypted_backup_json(void) {
 
         uint8_t *encrypted = NULL;
         size_t encrypted_len = 0;
-        err = beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
+        err = beb_encrypt_aes_gcm_256_v1_with_nonce(
             paths, paths_count, &content, v->keys, v->keys_count,
             (const uint8_t *)v->plaintext, v->plaintext_len, v->nonce,
             &encrypted, &encrypted_len);
 
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Encryption failed: %s\n",
-                   beb_ll_error_string(err));
-            beb_ll_content_free(&content);
+                   beb_error_string(err));
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1473,7 +1473,7 @@ static int test_encrypted_backup_json(void) {
             hex_encode(v->expected, sample_len, exp_hex);
             printf("      Got (first %zu bytes): %s\n", sample_len, got_hex);
             printf("      Exp (first %zu bytes): %s\n", sample_len, exp_hex);
-            beb_ll_content_free(&content);
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1486,12 +1486,12 @@ static int test_encrypted_backup_json(void) {
         }
 
         beb_decode_v1_result_t decode_result;
-        err = beb_ll_decode_v1(encrypted, encrypted_len, &decode_result);
-        if (err != BEB_LL_ERROR_OK) {
+        err = beb_decode_v1(encrypted, encrypted_len, &decode_result);
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: Decode failed: %s\n", beb_ll_error_string(err));
-            beb_ll_content_free(&content);
+            printf("    FAIL: Decode failed: %s\n", beb_error_string(err));
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1507,8 +1507,8 @@ static int test_encrypted_backup_json(void) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: No individual secrets in decoded backup\n");
-            beb_ll_decode_v1_result_free(&decode_result);
-            beb_ll_content_free(&content);
+            beb_decode_v1_result_free(&decode_result);
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1532,18 +1532,18 @@ static int test_encrypted_backup_json(void) {
         uint8_t *decrypted = NULL;
         size_t decrypted_len = 0;
         bool decrypted_ok = false;
-        beb_ll_error_t decrypt_err = BEB_LL_ERROR_DECRYPT;
+        beb_error_t decrypt_err = BEB_ERROR_DECRYPT;
 
         for (size_t s = 0; s < decode_result.secrets_count; s++) {
-            beb_ll_error_t xor_err = beb_ll_xor(
+            beb_error_t xor_err = beb_xor(
                 decode_result.individual_secrets[s].data, si, secret);
-            if (xor_err != BEB_LL_ERROR_OK) {
+            if (xor_err != BEB_ERROR_OK) {
                 printf("  Case %zu: %s\n", i + 1,
                        v->description ? v->description : "(no description)");
                 printf("    FAIL: XOR failed: %s\n",
-                       beb_ll_error_string(xor_err));
-                beb_ll_decode_v1_result_free(&decode_result);
-                beb_ll_content_free(&content);
+                       beb_error_string(xor_err));
+                beb_decode_v1_result_free(&decode_result);
+                beb_content_free(&content);
                 if (paths) {
                     for (size_t d = 0; d < paths_count; d++) {
                         free(paths[d].children);
@@ -1557,11 +1557,11 @@ static int test_encrypted_backup_json(void) {
 
             uint8_t *candidate_plaintext = NULL;
             size_t candidate_len = 0;
-            beb_ll_error_t try_err = beb_ll_try_decrypt_aes_gcm_256(
+            beb_error_t try_err = beb_try_decrypt_aes_gcm_256(
                 decode_result.cyphertext, decode_result.cyphertext_len, secret,
                 decode_result.nonce, &candidate_plaintext, &candidate_len);
 
-            if (try_err == BEB_LL_ERROR_OK) {
+            if (try_err == BEB_ERROR_OK) {
                 decrypted = candidate_plaintext;
                 decrypted_len = candidate_len;
                 decrypted_ok = true;
@@ -1575,9 +1575,9 @@ static int test_encrypted_backup_json(void) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Decryption failed: %s\n",
-                   beb_ll_error_string(decrypt_err));
-            beb_ll_decode_v1_result_free(&decode_result);
-            beb_ll_content_free(&content);
+                   beb_error_string(decrypt_err));
+            beb_decode_v1_result_free(&decode_result);
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1591,17 +1591,17 @@ static int test_encrypted_backup_json(void) {
 
         beb_content_t decoded_content;
         size_t offset = 0;
-        err = beb_ll_parse_content_metadata(decrypted, decrypted_len, &offset,
+        err = beb_parse_content_metadata(decrypted, decrypted_len, &offset,
                                             &decoded_content);
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Content metadata parse failed: %s\n",
-                   beb_ll_error_string(err));
-            beb_ll_content_free(&decoded_content);
+                   beb_error_string(err));
+            beb_content_free(&decoded_content);
             free(decrypted);
-            beb_ll_decode_v1_result_free(&decode_result);
-            beb_ll_content_free(&content);
+            beb_decode_v1_result_free(&decode_result);
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1619,10 +1619,10 @@ static int test_encrypted_backup_json(void) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
             printf("    FAIL: Decrypted plaintext mismatch\n");
-            beb_ll_content_free(&decoded_content);
+            beb_content_free(&decoded_content);
             free(decrypted);
-            beb_ll_decode_v1_result_free(&decode_result);
-            beb_ll_content_free(&content);
+            beb_decode_v1_result_free(&decode_result);
+            beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1634,10 +1634,10 @@ static int test_encrypted_backup_json(void) {
             continue;
         }
 
-        beb_ll_content_free(&decoded_content);
+        beb_content_free(&decoded_content);
         free(decrypted);
-        beb_ll_decode_v1_result_free(&decode_result);
-        beb_ll_content_free(&content);
+        beb_decode_v1_result_free(&decode_result);
+        beb_content_free(&content);
         if (paths) {
             for (size_t d = 0; d < paths_count; d++) {
                 free(paths[d].children);
@@ -1675,36 +1675,36 @@ static int test_content_type_json(void) {
 
         beb_content_t content;
         size_t offset = 0;
-        beb_ll_error_t err = beb_ll_parse_content_metadata(
+        beb_error_t err = beb_parse_content_metadata(
             v->content, v->content_len, &offset, &content);
 
         if (!v->valid) {
-            if (err == BEB_LL_ERROR_OK) {
+            if (err == BEB_ERROR_OK) {
                 printf("  Case %zu: %s\n", i + 1,
                        v->description ? v->description : "(no description)");
                 printf("    FAIL: expected parse failure but got success\n");
-                beb_ll_content_free(&content);
+                beb_content_free(&content);
                 failures++;
             }
             continue;
         }
 
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: parse failed: %s\n", beb_ll_error_string(err));
+            printf("    FAIL: parse failed: %s\n", beb_error_string(err));
             failures++;
             continue;
         }
 
         uint8_t *encoded = NULL;
         size_t encoded_len = 0;
-        err = beb_ll_encode_content(&content, &encoded, &encoded_len);
-        if (err != BEB_LL_ERROR_OK) {
+        err = beb_encode_content(&content, &encoded, &encoded_len);
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: encode failed: %s\n", beb_ll_error_string(err));
-            beb_ll_content_free(&content);
+            printf("    FAIL: encode failed: %s\n", beb_error_string(err));
+            beb_content_free(&content);
             failures++;
             continue;
         }
@@ -1717,7 +1717,7 @@ static int test_content_type_json(void) {
         }
 
         free(encoded);
-        beb_ll_content_free(&content);
+        beb_content_free(&content);
     }
 
     free_content_type_vectors(vecs, count);
@@ -1773,11 +1773,11 @@ static int test_derivation_path_json(void) {
 
         uint8_t *encoded = NULL;
         size_t encoded_len = 0;
-        beb_ll_error_t err = beb_ll_encode_derivation_paths(
+        beb_error_t err = beb_encode_derivation_paths(
             paths, paths_count, &encoded, &encoded_len);
 
         if (!v->expect_success) {
-            if (err == BEB_LL_ERROR_OK) {
+            if (err == BEB_ERROR_OK) {
                 printf(
                     "  Case %zu: %s\n", i + 1,
                     v->description ? v->description : "(no description)");
@@ -1794,10 +1794,10 @@ static int test_derivation_path_json(void) {
             continue;
         }
 
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: encode failed: %s\n", beb_ll_error_string(err));
+            printf("    FAIL: encode failed: %s\n", beb_error_string(err));
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
                     free(paths[d].children);
@@ -1865,11 +1865,11 @@ static int test_individual_secrets_json(void) {
 
         uint8_t *encoded = NULL;
         size_t encoded_len = 0;
-        beb_ll_error_t err = beb_ll_encode_individual_secrets(
+        beb_error_t err = beb_encode_individual_secrets(
             secrets, v->secrets_count, &encoded, &encoded_len);
 
         if (!v->expect_success) {
-            if (err == BEB_LL_ERROR_OK) {
+            if (err == BEB_ERROR_OK) {
                 printf(
                     "  Case %zu: %s\n", i + 1,
                     v->description ? v->description : "(no description)");
@@ -1881,10 +1881,10 @@ static int test_individual_secrets_json(void) {
             continue;
         }
 
-        if (err != BEB_LL_ERROR_OK) {
+        if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: encode failed: %s\n", beb_ll_error_string(err));
+            printf("    FAIL: encode failed: %s\n", beb_error_string(err));
             free(secrets);
             failures++;
             continue;

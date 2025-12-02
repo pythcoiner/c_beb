@@ -1,5 +1,5 @@
-#ifndef BEB_LL_H
-#define BEB_LL_H
+#ifndef BEB_H
+#define BEB_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -11,31 +11,31 @@ extern "C" {
 
 /* Error types matching ll::Error */
 typedef enum {
-    BEB_LL_ERROR_OK = 0,
-    BEB_LL_ERROR_KEY_COUNT,
-    BEB_LL_ERROR_DERIV_PATH_COUNT,
-    BEB_LL_ERROR_DERIV_PATH_LENGTH,
-    BEB_LL_ERROR_DERIV_PATH_EMPTY,
-    BEB_LL_ERROR_DATA_LENGTH,
-    BEB_LL_ERROR_ENCRYPT,
-    BEB_LL_ERROR_DECRYPT,
-    BEB_LL_ERROR_CORRUPTED,
-    BEB_LL_ERROR_VERSION,
-    BEB_LL_ERROR_MAGIC,
-    BEB_LL_ERROR_VARINT,
-    BEB_LL_ERROR_WRONG_KEY,
-    BEB_LL_ERROR_INDIVIDUAL_SECRETS_EMPTY,
-    BEB_LL_ERROR_INDIVIDUAL_SECRETS_LENGTH,
-    BEB_LL_ERROR_CYPHERTEXT_EMPTY,
-    BEB_LL_ERROR_CYPHERTEXT_LENGTH,
-    BEB_LL_ERROR_CONTENT_METADATA,
-    BEB_LL_ERROR_ENCRYPTION,
-    BEB_LL_ERROR_OFFSET_OVERFLOW,
-    BEB_LL_ERROR_EMPTY_BYTES,
-    BEB_LL_ERROR_INCREMENT,
-    BEB_LL_ERROR_CONTENT_METADATA_EMPTY,
-    BEB_LL_ERROR_CONTENT_RESERVED
-} beb_ll_error_t;
+    BEB_ERROR_OK = 0,
+    BEB_ERROR_KEY_COUNT,
+    BEB_ERROR_DERIV_PATH_COUNT,
+    BEB_ERROR_DERIV_PATH_LENGTH,
+    BEB_ERROR_DERIV_PATH_EMPTY,
+    BEB_ERROR_DATA_LENGTH,
+    BEB_ERROR_ENCRYPT,
+    BEB_ERROR_DECRYPT,
+    BEB_ERROR_CORRUPTED,
+    BEB_ERROR_VERSION,
+    BEB_ERROR_MAGIC,
+    BEB_ERROR_VARINT,
+    BEB_ERROR_WRONG_KEY,
+    BEB_ERROR_INDIVIDUAL_SECRETS_EMPTY,
+    BEB_ERROR_INDIVIDUAL_SECRETS_LENGTH,
+    BEB_ERROR_CYPHERTEXT_EMPTY,
+    BEB_ERROR_CYPHERTEXT_LENGTH,
+    BEB_ERROR_CONTENT_METADATA,
+    BEB_ERROR_ENCRYPTION,
+    BEB_ERROR_OFFSET_OVERFLOW,
+    BEB_ERROR_EMPTY_BYTES,
+    BEB_ERROR_INCREMENT,
+    BEB_ERROR_CONTENT_METADATA_EMPTY,
+    BEB_ERROR_CONTENT_RESERVED
+} beb_error_t;
 
 /* Content types matching ll::Content */
 typedef enum {
@@ -107,57 +107,57 @@ typedef struct {
     "\x8a\x5a\x0f\x28\xec\x96\xd5\x47\xbf\xee\x9a\xce\x80\x3a\xc0"
 
 /* Utility functions */
-beb_ll_error_t beb_ll_xor(const uint8_t a[32], const uint8_t b[32],
+beb_error_t beb_xor(const uint8_t a[32], const uint8_t b[32],
                           uint8_t out[32]);
-const char *beb_ll_error_string(beb_ll_error_t error);
+const char *beb_error_string(beb_error_t error);
 
 /* Offset checking utilities */
-beb_ll_error_t beb_ll_check_offset(size_t offset, const uint8_t *bytes,
+beb_error_t beb_check_offset(size_t offset, const uint8_t *bytes,
                                    size_t bytes_len);
-beb_ll_error_t beb_ll_check_offset_lookahead(size_t offset,
+beb_error_t beb_check_offset_lookahead(size_t offset,
                                              const uint8_t *bytes,
                                              size_t bytes_len,
                                              size_t lookahead);
-beb_ll_error_t beb_ll_init_offset(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_init_offset(const uint8_t *bytes, size_t bytes_len,
                                   size_t value, size_t *out);
-beb_ll_error_t beb_ll_increment_offset(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_increment_offset(const uint8_t *bytes, size_t bytes_len,
                                        size_t offset, size_t incr, size_t *out);
 
 /* VarInt encoding/decoding (Bitcoin consensus format) */
-size_t beb_ll_varint_encode_size(uint64_t value);
-beb_ll_error_t beb_ll_varint_encode(uint64_t value, uint8_t *out,
+size_t beb_varint_encode_size(uint64_t value);
+beb_error_t beb_varint_encode(uint64_t value, uint8_t *out,
                                     size_t out_len, size_t *written);
-beb_ll_error_t beb_ll_varint_decode(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_varint_decode(const uint8_t *bytes, size_t bytes_len,
                                     size_t *offset, uint64_t *value);
 
 /* Content metadata functions */
-beb_ll_error_t beb_ll_parse_content_metadata(const uint8_t *bytes,
+beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
                                              size_t bytes_len,
                                              size_t *offset_out,
                                              beb_content_t *content_out);
-beb_ll_error_t beb_ll_encode_content(const beb_content_t *content,
+beb_error_t beb_encode_content(const beb_content_t *content,
                                      uint8_t **out, size_t *out_len);
-void beb_ll_content_free(beb_content_t *content);
-bool beb_ll_content_is_known(const beb_content_t *content);
+void beb_content_free(beb_content_t *content);
+bool beb_content_is_known(const beb_content_t *content);
 
 /* Cryptographic functions */
-beb_ll_error_t beb_ll_decryption_secret(const beb_pubkey_t *keys,
+beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
                                         size_t keys_count,
                                         uint8_t secret_out[32]);
-beb_ll_error_t beb_ll_individual_secret(const uint8_t secret[32],
+beb_error_t beb_individual_secret(const uint8_t secret[32],
                                         const beb_pubkey_t *key,
                                         uint8_t individual_secret_out[32]);
-beb_ll_error_t beb_ll_individual_secrets(const uint8_t secret[32],
+beb_error_t beb_individual_secrets(const uint8_t secret[32],
                                          const beb_pubkey_t *keys,
                                          size_t keys_count,
                                          beb_secret_t **secrets_out,
                                          size_t *secrets_count_out);
-beb_ll_error_t beb_ll_encrypt_with_nonce(const uint8_t secret[32],
+beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
                                          const uint8_t *data, size_t data_len,
                                          const uint8_t nonce[12],
                                          uint8_t **ciphertext_out,
                                          size_t *ciphertext_len_out);
-beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
+beb_error_t beb_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
                                               size_t ciphertext_len,
                                               const uint8_t secret[32],
                                               const uint8_t nonce[12],
@@ -165,72 +165,72 @@ beb_ll_error_t beb_ll_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
                                               size_t *plaintext_len_out);
 
 /* Encoding functions */
-beb_ll_error_t
-beb_ll_encode_derivation_paths(const beb_derivation_path_t *paths,
+beb_error_t
+beb_encode_derivation_paths(const beb_derivation_path_t *paths,
                                size_t paths_count, uint8_t **out,
                                size_t *out_len);
-beb_ll_error_t beb_ll_encode_individual_secrets(const beb_secret_t *secrets,
+beb_error_t beb_encode_individual_secrets(const beb_secret_t *secrets,
                                                 size_t secrets_count,
                                                 uint8_t **out, size_t *out_len);
-beb_ll_error_t beb_ll_encode_encrypted_payload(const uint8_t nonce[12],
+beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
                                                const uint8_t *cyphertext,
                                                size_t cyphertext_len,
                                                uint8_t **out, size_t *out_len);
-beb_ll_error_t
-beb_ll_encode_v1(uint8_t version, const uint8_t *derivation_paths,
+beb_error_t
+beb_encode_v1(uint8_t version, const uint8_t *derivation_paths,
                  size_t deriv_paths_len, const uint8_t *individual_secrets,
                  size_t individual_secrets_len, uint8_t encryption,
                  const uint8_t *encrypted_payload, size_t encrypted_payload_len,
                  uint8_t **out, size_t *out_len);
 
 /* Parsing functions */
-beb_ll_error_t beb_ll_parse_magic_byte(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_parse_magic_byte(const uint8_t *bytes, size_t bytes_len,
                                        size_t *offset_out);
-beb_ll_error_t beb_ll_parse_version(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_parse_version(const uint8_t *bytes, size_t bytes_len,
                                     size_t *offset_out, uint8_t *version_out);
-beb_ll_error_t beb_ll_parse_encryption(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_parse_encryption(const uint8_t *bytes, size_t bytes_len,
                                        size_t *offset_out,
                                        uint8_t *encryption_out);
-beb_ll_error_t beb_ll_parse_derivation_paths(const uint8_t *bytes,
+beb_error_t beb_parse_derivation_paths(const uint8_t *bytes,
                                              size_t bytes_len,
                                              size_t *offset_out,
                                              beb_derivation_path_t **paths_out,
                                              size_t *paths_count_out);
-beb_ll_error_t beb_ll_parse_individual_secrets(const uint8_t *bytes,
+beb_error_t beb_parse_individual_secrets(const uint8_t *bytes,
                                                size_t bytes_len,
                                                size_t *offset_out,
                                                beb_secret_t **secrets_out,
                                                size_t *secrets_count_out);
-beb_ll_error_t beb_ll_parse_encrypted_payload(const uint8_t *bytes,
+beb_error_t beb_parse_encrypted_payload(const uint8_t *bytes,
                                               size_t bytes_len,
                                               size_t *offset_out,
                                               uint8_t nonce_out[12],
                                               uint8_t **cyphertext_out,
                                               size_t *cyphertext_len_out);
-beb_ll_error_t beb_ll_decode_version(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_decode_version(const uint8_t *bytes, size_t bytes_len,
                                      uint8_t *version_out);
-beb_ll_error_t beb_ll_decode_derivation_paths(const uint8_t *bytes,
+beb_error_t beb_decode_derivation_paths(const uint8_t *bytes,
                                               size_t bytes_len,
                                               beb_derivation_path_t **paths_out,
                                               size_t *paths_count_out);
-beb_ll_error_t beb_ll_decode_v1(const uint8_t *bytes, size_t bytes_len,
+beb_error_t beb_decode_v1(const uint8_t *bytes, size_t bytes_len,
                                 beb_decode_v1_result_t *result_out);
 
 /* High-level operations */
-beb_ll_error_t beb_ll_encrypt_aes_gcm_256_v1_with_nonce(
+beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     const beb_derivation_path_t *derivation_paths,
     size_t derivation_paths_count, const beb_content_t *content_metadata,
     const beb_pubkey_t *keys, size_t keys_count, const uint8_t *data,
     size_t data_len, const uint8_t nonce[12], uint8_t **out, size_t *out_len);
 
 /* Memory management */
-void beb_ll_derivation_paths_free(beb_derivation_path_t *paths, size_t count);
-void beb_ll_secrets_free(beb_secret_t *secrets, size_t count);
-void beb_ll_decode_v1_result_free(beb_decode_v1_result_t *result);
-void beb_ll_decrypt_result_free(beb_decrypt_result_t *result);
+void beb_derivation_paths_free(beb_derivation_path_t *paths, size_t count);
+void beb_secrets_free(beb_secret_t *secrets, size_t count);
+void beb_decode_v1_result_free(beb_decode_v1_result_t *result);
+void beb_decrypt_result_free(beb_decrypt_result_t *result);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* BEB_LL_H */
+#endif /* BEB_H */
