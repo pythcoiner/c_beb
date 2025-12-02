@@ -370,8 +370,7 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
                                &result_out->encryption_type);
     if (err != BEB_ERROR_OK) {
         beb_derivation_paths_free(result_out->paths, result_out->paths_count);
-        beb_secrets_free(result_out->individual_secrets,
-                         result_out->secrets_count);
+        free(result_out->individual_secrets);
         return err;
     }
     offset += encryption_offset;
@@ -383,8 +382,7 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
         &result_out->cyphertext, &result_out->cyphertext_len);
     if (err != BEB_ERROR_OK) {
         beb_derivation_paths_free(result_out->paths, result_out->paths_count);
-        beb_secrets_free(result_out->individual_secrets,
-                         result_out->secrets_count);
+        free(result_out->individual_secrets);
         return err;
     }
 

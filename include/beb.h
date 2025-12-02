@@ -253,7 +253,6 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
 
 /* Memory management */
 void beb_derivation_paths_free(beb_derivation_path_t *paths, size_t count);
-void beb_secrets_free(beb_secret_t *secrets, size_t count);
 void beb_decode_v1_result_free(beb_decode_v1_result_t *result);
 void beb_decrypt_result_free(beb_decrypt_result_t *result);
 

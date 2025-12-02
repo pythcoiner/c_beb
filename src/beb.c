@@ -15,16 +15,10 @@ void beb_derivation_paths_free(beb_derivation_path_t *paths, size_t count) {
     }
 }
 
-void beb_secrets_free(beb_secret_t *secrets, size_t count) {
-    if (secrets) {
-        free(secrets);
-    }
-}
-
 void beb_decode_v1_result_free(beb_decode_v1_result_t *result) {
     if (result) {
         beb_derivation_paths_free(result->paths, result->paths_count);
-        beb_secrets_free(result->individual_secrets, result->secrets_count);
+        free(result->individual_secrets);
         if (result->cyphertext) {
             free(result->cyphertext);
         }
@@ -399,7 +393,7 @@ cleanup:
     /* Free encoded derivation paths buffer */
     free(encoded_paths);
     /* Free array of individual secrets */
-    beb_secrets_free(individual_secrets, individual_secrets_count);
+    free(individual_secrets);
     /* Free encoded content metadata buffer */
     free(content_bytes);
     /* Free filtered/copy of derivation paths (and their children arrays) */
@@ -409,3 +403,5 @@ cleanup:
 
     return err;
 }
+
+

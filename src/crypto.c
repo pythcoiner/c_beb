@@ -10,17 +10,6 @@
  * the bundled secp256k1 subrepository. */
 #include "../secp256k1/src/hash_impl.h"
 
-/* One-shot SHA256 helper using libsecp256k1's SHA256. */
-static void
-sha256_hash(const uint8_t *data, size_t data_len, uint8_t hash_out[32]) {
-    secp256k1_sha256 ctx;
-
-    secp256k1_sha256_initialize(&ctx);
-    secp256k1_sha256_write(&ctx, data, data_len);
-    secp256k1_sha256_finalize(&ctx, hash_out);
-    secp256k1_sha256_clear(&ctx);
-}
-
 static int compare_pubkeys(const void *a, const void *b) {
     return memcmp(((const beb_pubkey_t *)a)->data,
                   ((const beb_pubkey_t *)b)->data,
