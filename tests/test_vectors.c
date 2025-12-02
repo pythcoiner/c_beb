@@ -1,5 +1,5 @@
 #include "../include/beb.h"
-#include <openssl/sha.h>
+#include "../secp256k1/src/hash_impl.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -1519,13 +1519,18 @@ static int test_encrypted_backup_json(void) {
             continue;
         }
 
-        SHA256_CTX ctx;
+        secp256k1_sha256 ctx;
         uint8_t si[32];
-        SHA256_Init(&ctx);
-        SHA256_Update(&ctx, BEB_INDIVIDUAL_SECRET,
-                      strlen(BEB_INDIVIDUAL_SECRET));
-        SHA256_Update(&ctx, v->keys[0].data, sizeof(v->keys[0].data));
-        SHA256_Final(si, &ctx);
+
+        secp256k1_sha256_initialize(&ctx);
+        secp256k1_sha256_write(&ctx,
+                               (const unsigned char *)BEB_INDIVIDUAL_SECRET,
+                               strlen(BEB_INDIVIDUAL_SECRET));
+        secp256k1_sha256_write(&ctx,
+                               v->keys[0].data,
+                               sizeof(v->keys[0].data));
+        secp256k1_sha256_finalize(&ctx, si);
+        secp256k1_sha256_clear(&ctx);
 
         uint8_t secret[32];
         uint8_t *decrypted = NULL;

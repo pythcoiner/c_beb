@@ -1,21 +1,24 @@
 #include "../include/beb.h"
 #include <openssl/aes.h>
 #include <openssl/evp.h>
-#include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* Note: For Bitcoin Core integration, replace OpenSSL SHA256 with Bitcoin
- * Core's crypto/sha256.h */
+/* Use libsecp256k1's internal SHA256 implementation instead of OpenSSL SHA256.
+ * This pulls in secp256k1_sha256 and related helpers as static functions from
+ * the bundled secp256k1 subrepository. */
+#include "../secp256k1/src/hash_impl.h"
 
-/* SHA256 using OpenSSL (to be replaced with Bitcoin Core's SHA256) */
+/* One-shot SHA256 helper using libsecp256k1's SHA256. */
 static void
 sha256_hash(const uint8_t *data, size_t data_len, uint8_t hash_out[32]) {
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
-    SHA256_Update(&ctx, data, data_len);
-    SHA256_Final(hash_out, &ctx);
+    secp256k1_sha256 ctx;
+
+    secp256k1_sha256_initialize(&ctx);
+    secp256k1_sha256_write(&ctx, data, data_len);
+    secp256k1_sha256_finalize(&ctx, hash_out);
+    secp256k1_sha256_clear(&ctx);
 }
 
 static int compare_pubkeys(const void *a, const void *b) {
@@ -65,38 +68,46 @@ beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
 
     qsort(filtered_keys, filtered_count, sizeof(beb_pubkey_t), compare_pubkeys);
 
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
-
+    secp256k1_sha256 ctx;
     const char *decryption_secret = BEB_DECRYPTION_SECRET;
-    SHA256_Update(&ctx, decryption_secret, strlen(decryption_secret));
+
+    secp256k1_sha256_initialize(&ctx);
+    secp256k1_sha256_write(&ctx,
+                           (const unsigned char *)decryption_secret,
+                           strlen(decryption_secret));
 
     for (size_t i = 0; i < filtered_count; i++) {
-        SHA256_Update(&ctx, filtered_keys[i].data,
-                      sizeof(filtered_keys[i].data));
+        secp256k1_sha256_write(&ctx,
+                               filtered_keys[i].data,
+                               sizeof(filtered_keys[i].data));
     }
 
     free(filtered_keys);
 
-    SHA256_Final(secret_out, &ctx);
+    secp256k1_sha256_finalize(&ctx, secret_out);
+    secp256k1_sha256_clear(&ctx);
     return BEB_ERROR_OK;
 }
 
 beb_error_t beb_individual_secret(const uint8_t secret[32],
                                   const beb_pubkey_t *key,
                                   uint8_t individual_secret_out[32]) {
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
+    secp256k1_sha256 ctx;
+    const char *individual_secret = BEB_INDIVIDUAL_SECRET;
+    uint8_t si[32];
+
+    secp256k1_sha256_initialize(&ctx);
 
     /* Hash the constant string */
-    const char *individual_secret = BEB_INDIVIDUAL_SECRET;
-    SHA256_Update(&ctx, individual_secret, strlen(individual_secret));
+    secp256k1_sha256_write(&ctx,
+                           (const unsigned char *)individual_secret,
+                           strlen(individual_secret));
 
     /* Hash the key */
-    SHA256_Update(&ctx, key->data, 33);
+    secp256k1_sha256_write(&ctx, key->data, 33);
 
-    uint8_t si[32];
-    SHA256_Final(si, &ctx);
+    secp256k1_sha256_finalize(&ctx, si);
+    secp256k1_sha256_clear(&ctx);
 
     /* XOR secret with si */
     return beb_xor(secret, si, individual_secret_out);
