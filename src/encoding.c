@@ -3,18 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Comparison function for qsort */
-static int compare_uint32(const void *a, const void *b) {
-    uint32_t va = *(const uint32_t *)a;
-    uint32_t vb = *(const uint32_t *)b;
-    if (va < vb)
-        return -1;
-    if (va > vb)
-        return 1;
-    return 0;
-}
+/* Comparison function prototypes */
+static int compare_derivation_paths(const void *a, const void *b);
+static int compare_secrets(const void *a, const void *b);
 
-/* Comparison function for derivation paths */
 static int compare_derivation_paths(const void *a, const void *b) {
     const beb_derivation_path_t *pa = (const beb_derivation_path_t *)a;
     const beb_derivation_path_t *pb = (const beb_derivation_path_t *)b;
@@ -33,7 +25,6 @@ static int compare_derivation_paths(const void *a, const void *b) {
     return 0;
 }
 
-/* Comparison function for secrets (32-byte arrays) */
 static int compare_secrets(const void *a, const void *b) {
     return memcmp(((const beb_secret_t *)a)->data,
                   ((const beb_secret_t *)b)->data, 32);
@@ -47,18 +38,37 @@ beb_ll_encode_derivation_paths(const beb_derivation_path_t *paths,
         return BEB_LL_ERROR_DERIV_PATH_LENGTH;
     }
 
+    const beb_derivation_path_t *ordered_paths = paths;
+    beb_derivation_path_t *paths_copy = NULL;
+
+    if (paths_count > 1) {
+        paths_copy =
+            (beb_derivation_path_t *)malloc(sizeof(beb_derivation_path_t) *
+                                            paths_count);
+        if (!paths_copy) {
+            return BEB_LL_ERROR_DERIV_PATH_COUNT;
+        }
+        memcpy(paths_copy, paths,
+               sizeof(beb_derivation_path_t) * paths_count);
+        qsort(paths_copy, paths_count, sizeof(beb_derivation_path_t),
+              compare_derivation_paths);
+        ordered_paths = paths_copy;
+    }
+
     /* Calculate total size needed */
     size_t total_size = 1; /* count byte */
     for (size_t i = 0; i < paths_count; i++) {
-        if (paths[i].count > 255) {
+        if (ordered_paths[i].count > 255) {
+            free(paths_copy);
             return BEB_LL_ERROR_DERIV_PATH_LENGTH;
         }
         total_size += 1;                  /* child count byte */
-        total_size += paths[i].count * 4; /* 4 bytes per child */
+        total_size += ordered_paths[i].count * 4; /* 4 bytes per child */
     }
 
     uint8_t *result = malloc(total_size);
     if (!result) {
+        free(paths_copy);
         return BEB_LL_ERROR_DERIV_PATH_COUNT;
     }
 
@@ -66,9 +76,9 @@ beb_ll_encode_derivation_paths(const beb_derivation_path_t *paths,
     result[offset++] = (uint8_t)paths_count;
 
     for (size_t i = 0; i < paths_count; i++) {
-        result[offset++] = (uint8_t)paths[i].count;
-        for (size_t j = 0; j < paths[i].count; j++) {
-            uint32_t child = paths[i].children[j];
+        result[offset++] = (uint8_t)ordered_paths[i].count;
+        for (size_t j = 0; j < ordered_paths[i].count; j++) {
+            uint32_t child = ordered_paths[i].children[j];
             result[offset++] = (uint8_t)(child >> 24);
             result[offset++] = (uint8_t)(child >> 16);
             result[offset++] = (uint8_t)(child >> 8);
@@ -76,6 +86,7 @@ beb_ll_encode_derivation_paths(const beb_derivation_path_t *paths,
         }
     }
 
+    free(paths_copy);
     *out = result;
     *out_len = total_size;
     return BEB_LL_ERROR_OK;

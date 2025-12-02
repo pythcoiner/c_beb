@@ -89,9 +89,26 @@ install(FILES include/beb_ll.h
 
 # Build tests if enabled
 if(BUILD_TESTING)
-    # Try to find cJSON for JSON parsing (optional)
+    # Try to find cJSON for JSON parsing (required when testing is enabled)
+    # First try a CMake package, then fall back to pkg-config on distros like Arch.
     find_package(cJSON QUIET)
-    
+    if(NOT cJSON_FOUND)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(CJSON QUIET cjson)
+        endif()
+    endif()
+
+    # Normalise detection into a single flag
+    set(HAVE_CJSON_LIB OFF)
+    if(cJSON_FOUND OR CJSON_FOUND)
+        set(HAVE_CJSON_LIB ON)
+    endif()
+
+    if(NOT HAVE_CJSON_LIB)
+        message(FATAL_ERROR "cJSON not found but BUILD_TESTING is ON. Please install cJSON (e.g. 'sudo apt-get install libcjson-dev' or 'sudo pacman -S cjson') or disable tests with -DBUILD_TESTING=OFF.")
+    endif()
+
     # Unit tests
     add_executable(test_main tests/test_main.c)
     target_link_libraries(test_main beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
@@ -103,12 +120,11 @@ if(BUILD_TESTING)
     # Test vectors runner
     add_executable(test_vectors_runner tests/test_vectors.c)
     target_link_libraries(test_vectors_runner beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
-    
-    if(cJSON_FOUND)
-        target_link_libraries(test_vectors_runner ${CJSON_LIBRARIES})
-        target_include_directories(test_vectors_runner PRIVATE ${CJSON_INCLUDE_DIRS})
-        target_compile_definitions(test_vectors_runner PRIVATE HAVE_CJSON)
-    endif()
+
+    # Link against cJSON and define HAVE_CJSON now that we know it's available
+    target_link_libraries(test_vectors_runner ${CJSON_LIBRARIES})
+    target_include_directories(test_vectors_runner PRIVATE ${CJSON_INCLUDE_DIRS})
+    target_compile_definitions(test_vectors_runner PRIVATE HAVE_CJSON)
     
     add_test(NAME beb_ll_test_vectors COMMAND test_vectors_runner)
     set_tests_properties(beb_ll_test_vectors PROPERTIES

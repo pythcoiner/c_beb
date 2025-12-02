@@ -2,6 +2,7 @@
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,24 +18,63 @@ static void sha256_hash(const uint8_t *data, size_t data_len,
     SHA256_Final(hash_out, &ctx);
 }
 
+static int compare_pubkeys(const void *a, const void *b) {
+    return memcmp(((const beb_pubkey_t *)a)->data,
+                  ((const beb_pubkey_t *)b)->data,
+                  sizeof(((const beb_pubkey_t *)0)->data));
+}
+
+static bool is_bip341_nums(const beb_pubkey_t *key) {
+    return memcmp(key->data, BEB_BIP341_NUMS_PUBKEY, sizeof(key->data)) == 0;
+}
+
 beb_ll_error_t beb_ll_decryption_secret(const beb_pubkey_t *keys,
                                         size_t keys_count,
                                         uint8_t secret_out[32]) {
-    if (keys_count == 0 || keys_count > 255) {
+    if (keys_count == 0) {
         return BEB_LL_ERROR_KEY_COUNT;
     }
+
+    beb_pubkey_t *filtered_keys = malloc(sizeof(beb_pubkey_t) * keys_count);
+    if (!filtered_keys) {
+        return BEB_LL_ERROR_DECRYPT;
+    }
+
+    size_t filtered_count = 0;
+    for (size_t i = 0; i < keys_count; i++) {
+        if (is_bip341_nums(&keys[i])) {
+            continue;
+        }
+        bool found = false;
+        for (size_t j = 0; j < filtered_count; j++) {
+            if (memcmp(filtered_keys[j].data, keys[i].data, sizeof(keys[i].data)) == 0) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            filtered_keys[filtered_count++] = keys[i];
+        }
+    }
+
+    if (filtered_count == 0 || filtered_count > 255) {
+        free(filtered_keys);
+        return BEB_LL_ERROR_KEY_COUNT;
+    }
+
+    qsort(filtered_keys, filtered_count, sizeof(beb_pubkey_t), compare_pubkeys);
 
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
 
-    /* Hash the constant string */
     const char *decryption_secret = BEB_DECRYPTION_SECRET;
     SHA256_Update(&ctx, decryption_secret, strlen(decryption_secret));
 
-    /* Hash each key (already sorted by caller) */
-    for (size_t i = 0; i < keys_count; i++) {
-        SHA256_Update(&ctx, keys[i].data, 33);
+    for (size_t i = 0; i < filtered_count; i++) {
+        SHA256_Update(&ctx, filtered_keys[i].data, sizeof(filtered_keys[i].data));
     }
+
+    free(filtered_keys);
 
     SHA256_Final(secret_out, &ctx);
     return BEB_LL_ERROR_OK;

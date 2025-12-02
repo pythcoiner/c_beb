@@ -12,6 +12,7 @@ This project uses **CMake** as the build system.
 - **libsecp256k1**: For secp256k1 public key operations (included as git submodule)
 - **C99 compiler**: GCC or Clang
 - **CMake** (3.22+): Build system (required for libsecp256k1 submodule)
+- **cJSON**: For JSON test vectors (required when `BUILD_TESTING=ON`)
 
 ## Building
 
@@ -44,6 +45,39 @@ This will create:
 - `libbeb_ll.a` - Static library
 - `test_main` - Unit test executable (if BUILD_TESTING is ON)
 - `test_vectors_runner` - Test vectors executable (if BUILD_TESTING is ON)
+
+If `BUILD_TESTING` is enabled (the default), `cJSON` must be available or CMake
+configuration will fail.
+
+### Installing cJSON
+
+#### Debian / Ubuntu
+
+On Debian/Ubuntu and derivatives:
+
+```bash
+sudo apt-get update
+sudo apt-get install libcjson-dev
+```
+
+This installs the development headers and library so that `find_package(cJSON)`
+in CMake can locate it.
+
+#### Arch Linux
+
+On Arch Linux and derivatives:
+
+```bash
+sudo pacman -S cjson
+```
+
+This provides the `cJSON` library and headers. After installing, re-run CMake:
+
+```bash
+cd build
+cmake ..
+cmake --build .
+```
 
 
 ## Usage
