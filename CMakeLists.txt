@@ -49,39 +49,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/CMakeLists.txt")
     set(SECP256K1_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include")
     include_directories(${SECP256K1_INCLUDE_DIRS})
 else()
-    # Fallback: try to find system-installed libsecp256k1
     message(STATUS "secp256k1 submodule not found, trying system installation")
     find_package(PkgConfig QUIET)
     
     if(PkgConfig_FOUND)
         pkg_check_modules(SECP256K1 QUIET libsecp256k1)
-    endif()
-    
-    if(NOT SECP256K1_FOUND)
-        find_library(SECP256K1_LIBRARY
-            NAMES secp256k1
-            PATHS
-            /usr/local/lib
-            /usr/lib
-            /opt/local/lib
-        )
-        
-        find_path(SECP256K1_INCLUDE_DIR
-            NAMES secp256k1.h
-            PATHS
-            /usr/local/include
-            /usr/include
-            /opt/local/include
-        )
-        
-        if(SECP256K1_LIBRARY AND SECP256K1_INCLUDE_DIR)
-            set(SECP256K1_LIBRARIES ${SECP256K1_LIBRARY})
-            set(SECP256K1_INCLUDE_DIRS ${SECP256K1_INCLUDE_DIR})
-            set(SECP256K1_FOUND TRUE)
-            include_directories(${SECP256K1_INCLUDE_DIRS})
-        endif()
-    else
-        include_directories(${SECP256K1_INCLUDE_DIRS})
     endif()
     
     if(NOT SECP256K1_FOUND)
@@ -120,32 +92,28 @@ if(BUILD_TESTING)
     # Try to find cJSON for JSON parsing (optional)
     find_package(cJSON QUIET)
     
-    # Build test_main.c if it exists
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_main.c")
-        add_executable(test_main tests/test_main.c)
-        target_link_libraries(test_main beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
-        add_test(NAME beb_ll_unit_tests COMMAND test_main)
-        set_tests_properties(beb_ll_unit_tests PROPERTIES
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
-        )
+    # Unit tests
+    add_executable(test_main tests/test_main.c)
+    target_link_libraries(test_main beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
+    add_test(NAME beb_ll_unit_tests COMMAND test_main)
+    set_tests_properties(beb_ll_unit_tests PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+    
+    # Test vectors runner
+    add_executable(test_vectors_runner tests/test_vectors.c)
+    target_link_libraries(test_vectors_runner beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
+    
+    if(cJSON_FOUND)
+        target_link_libraries(test_vectors_runner ${CJSON_LIBRARIES})
+        target_include_directories(test_vectors_runner PRIVATE ${CJSON_INCLUDE_DIRS})
+        target_compile_definitions(test_vectors_runner PRIVATE HAVE_CJSON)
     endif()
     
-    # Build test_vectors.c if it exists
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_vectors.c")
-        add_executable(test_vectors_runner tests/test_vectors.c)
-        target_link_libraries(test_vectors_runner beb_ll ${OPENSSL_LIBRARIES} ${SECP256K1_LIBRARIES})
-        
-        if(cJSON_FOUND)
-            target_link_libraries(test_vectors_runner ${CJSON_LIBRARIES})
-            target_include_directories(test_vectors_runner PRIVATE ${CJSON_INCLUDE_DIRS})
-            target_compile_definitions(test_vectors_runner PRIVATE HAVE_CJSON)
-        endif()
-        
-        add_test(NAME beb_ll_test_vectors COMMAND test_vectors_runner)
-        set_tests_properties(beb_ll_test_vectors PROPERTIES
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
-        )
-    endif()
+    add_test(NAME beb_ll_test_vectors COMMAND test_vectors_runner)
+    set_tests_properties(beb_ll_test_vectors PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
 endif()
 
 # Print configuration summary
