@@ -3,9 +3,9 @@
 #include <string.h>
 
 beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
-                                             size_t bytes_len,
-                                             size_t *offset_out,
-                                             beb_content_t *content_out) {
+                                       size_t bytes_len,
+                                       size_t *offset_out,
+                                       beb_content_t *content_out) {
     if (bytes_len == 0) {
         return BEB_ERROR_CONTENT_METADATA_EMPTY;
     }
@@ -63,7 +63,8 @@ beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
 }
 
 beb_error_t beb_encode_content(const beb_content_t *content,
-                                     uint8_t **out, size_t *out_len) {
+                               uint8_t **out,
+                               size_t *out_len) {
     uint8_t *result = NULL;
     size_t len = 0;
 

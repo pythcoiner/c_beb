@@ -17,7 +17,7 @@ static size_t hex_decode(const char *hex, uint8_t *out, size_t out_len) {
 
     for (size_t i = 0; i < hex_len / 2; i++) {
         char c1 = hex[i * 2];
-        char c2 = hex[i * 2 + 1];
+        char c2 = hex[(i * 2) + 1];
         uint8_t val = 0;
 
         if (c1 >= '0' && c1 <= '9')
@@ -49,7 +49,7 @@ static void hex_encode(const uint8_t *data, size_t len, char *out) {
     const char hex_chars[] = "0123456789abcdef";
     for (size_t i = 0; i < len; i++) {
         out[i * 2] = hex_chars[(data[i] >> 4) & 0xf];
-        out[i * 2 + 1] = hex_chars[data[i] & 0xf];
+        out[(i * 2) + 1] = hex_chars[data[i] & 0xf];
     }
     out[len * 2] = '\0';
 }
@@ -89,13 +89,12 @@ static void free_content_type_vectors(content_type_vector_t *vecs,
                                       size_t count);
 static void free_derivation_path_vectors(derivation_path_vector_t *vecs,
                                          size_t count);
-static void
-free_individual_secrets_vectors(individual_secrets_vector_t *vecs,
-                                size_t count);
+static void free_individual_secrets_vectors(individual_secrets_vector_t *vecs,
+                                            size_t count);
 
 /* Compare byte arrays */
-static bool bytes_equal(const uint8_t *a, size_t a_len, const uint8_t *b,
-                        size_t b_len) {
+static bool
+bytes_equal(const uint8_t *a, size_t a_len, const uint8_t *b, size_t b_len) {
     if (a_len != b_len)
         return false;
     return memcmp(a, b, a_len) == 0;
@@ -113,11 +112,11 @@ static size_t sort_and_unique_bytes32(uint8_t *data, size_t count) {
 
     size_t unique_count = 1;
     for (size_t i = 1; i < count; i++) {
-        uint8_t *current = data + i * 32;
-        uint8_t *last_unique = data + (unique_count - 1) * 32;
+        uint8_t *current = data + (i * 32);
+        uint8_t *last_unique = data + ((unique_count - 1) * 32);
         if (memcmp(current, last_unique, 32) != 0) {
             if (unique_count != i) {
-                memcpy(data + unique_count * 32, current, 32);
+                memcpy(data + (unique_count * 32), current, 32);
             }
             unique_count++;
         }
@@ -229,14 +228,13 @@ static int load_content_type_vectors(const char *path,
         vecs[i].valid = cJSON_IsTrue(valid);
 
         size_t hex_len = strlen(content->valuestring);
-        vecs[i].content =
-            (uint8_t *)malloc(hex_len / 2 + 1); /* +1 safety */
+        vecs[i].content = (uint8_t *)malloc((hex_len / 2) + 1); /* +1 safety */
         if (!vecs[i].content) {
             ok = false;
             break;
         }
         vecs[i].content_len = hex_decode(content->valuestring, vecs[i].content,
-                                         hex_len / 2 + 1);
+                                         (hex_len / 2) + 1);
         if (vecs[i].content_len == 0 && hex_len != 0) {
             ok = false;
             break;
@@ -331,8 +329,8 @@ static int load_derivation_path_vectors(const char *path,
         }
 
         size_t pcount = (size_t)cJSON_GetArraySize(paths);
-        vecs[i].paths =
-            (char **)calloc(pcount > 0 ? pcount : 1, sizeof(char *));
+        vecs[i].paths = (char **)calloc(pcount > 0 ? pcount : 1,
+                                        sizeof(char *));
         if (!vecs[i].paths && pcount > 0) {
             ok = false;
             break;
@@ -359,15 +357,14 @@ static int load_derivation_path_vectors(const char *path,
             vecs[i].expect_success = false;
         } else if (cJSON_IsString(expected)) {
             size_t hex_len = strlen(expected->valuestring);
-            vecs[i].expected =
-                (uint8_t *)malloc(hex_len / 2 + 1); /* +1 safety */
+            vecs[i].expected = (uint8_t *)malloc((hex_len / 2) +
+                                                 1); /* +1 safety */
             if (!vecs[i].expected) {
                 ok = false;
                 break;
             }
-            vecs[i].expected_len =
-                hex_decode(expected->valuestring, vecs[i].expected,
-                           hex_len / 2 + 1);
+            vecs[i].expected_len = hex_decode(
+                expected->valuestring, vecs[i].expected, (hex_len / 2) + 1);
             vecs[i].expect_success = true;
         } else {
             ok = false;
@@ -386,9 +383,10 @@ static int load_derivation_path_vectors(const char *path,
     return 0;
 }
 
-static int load_individual_secrets_vectors(
-    const char *path, individual_secrets_vector_t **out_vecs,
-    size_t *out_count) {
+static int
+load_individual_secrets_vectors(const char *path,
+                                individual_secrets_vector_t **out_vecs,
+                                size_t *out_count) {
     *out_vecs = NULL;
     *out_count = 0;
 
@@ -432,9 +430,8 @@ static int load_individual_secrets_vectors(
     }
 
     size_t count = (size_t)cJSON_GetArraySize(root);
-    individual_secrets_vector_t *vecs =
-        (individual_secrets_vector_t *)calloc(
-            count, sizeof(individual_secrets_vector_t));
+    individual_secrets_vector_t *vecs = (individual_secrets_vector_t *)calloc(
+        count, sizeof(individual_secrets_vector_t));
     if (!vecs) {
         cJSON_Delete(root);
         return 1;
@@ -464,8 +461,7 @@ static int load_individual_secrets_vectors(
         }
 
         size_t scount = (size_t)cJSON_GetArraySize(secrets);
-        vecs[i].secrets =
-            (uint8_t *)malloc(scount > 0 ? scount * 32 : 1);
+        vecs[i].secrets = (uint8_t *)malloc(scount > 0 ? scount * 32 : 1);
         if (!vecs[i].secrets && scount > 0) {
             ok = false;
             break;
@@ -478,7 +474,7 @@ static int load_individual_secrets_vectors(
                 ok = false;
                 break;
             }
-            if (hex_decode(s->valuestring, vecs[i].secrets + j * 32, 32) !=
+            if (hex_decode(s->valuestring, vecs[i].secrets + (j * 32), 32) !=
                 32) {
                 ok = false;
                 break;
@@ -493,15 +489,13 @@ static int load_individual_secrets_vectors(
             vecs[i].expect_success = false;
         } else if (cJSON_IsString(expected)) {
             size_t hex_len = strlen(expected->valuestring);
-            vecs[i].expected =
-                (uint8_t *)malloc(hex_len / 2 + 1);
+            vecs[i].expected = (uint8_t *)malloc((hex_len / 2) + 1);
             if (!vecs[i].expected) {
                 ok = false;
                 break;
             }
-            vecs[i].expected_len =
-                hex_decode(expected->valuestring, vecs[i].expected,
-                           hex_len / 2 + 1);
+            vecs[i].expected_len = hex_decode(
+                expected->valuestring, vecs[i].expected, (hex_len / 2) + 1);
             vecs[i].expect_success = true;
         } else {
             ok = false;
@@ -548,9 +542,8 @@ static void free_derivation_path_vectors(derivation_path_vector_t *vecs,
     free(vecs);
 }
 
-static void
-free_individual_secrets_vectors(individual_secrets_vector_t *vecs,
-                                size_t count) {
+static void free_individual_secrets_vectors(individual_secrets_vector_t *vecs,
+                                            size_t count) {
     if (!vecs)
         return;
     for (size_t i = 0; i < count; i++) {
@@ -561,7 +554,8 @@ free_individual_secrets_vectors(individual_secrets_vector_t *vecs,
     free(vecs);
 }
 
-static int load_aesgcm_vectors(const char *path, aesgcm_vector_t **out_vecs,
+static int load_aesgcm_vectors(const char *path,
+                               aesgcm_vector_t **out_vecs,
                                size_t *out_count) {
     *out_vecs = NULL;
     *out_count = 0;
@@ -643,13 +637,13 @@ static int load_aesgcm_vectors(const char *path, aesgcm_vector_t **out_vecs,
                                        sizeof(vecs[i].nonce));
 
         size_t pt_hex_len = strlen(plaintext->valuestring);
-        vecs[i].plaintext = (uint8_t *)malloc(pt_hex_len / 2 + 1);
+        vecs[i].plaintext = (uint8_t *)malloc((pt_hex_len / 2) + 1);
         if (!vecs[i].plaintext) {
             ok = false;
             break;
         }
         vecs[i].plaintext_len = hex_decode(
-            plaintext->valuestring, vecs[i].plaintext, pt_hex_len / 2 + 1);
+            plaintext->valuestring, vecs[i].plaintext, (pt_hex_len / 2) + 1);
 
         vecs[i].secret_len = hex_decode(secret->valuestring, vecs[i].secret,
                                         sizeof(vecs[i].secret));
@@ -660,14 +654,14 @@ static int load_aesgcm_vectors(const char *path, aesgcm_vector_t **out_vecs,
             vecs[i].ciphertext_len = 0;
         } else if (cJSON_IsString(ciphertext)) {
             size_t ct_hex_len = strlen(ciphertext->valuestring);
-            vecs[i].ciphertext = (uint8_t *)malloc(ct_hex_len / 2 + 1);
+            vecs[i].ciphertext = (uint8_t *)malloc((ct_hex_len / 2) + 1);
             if (!vecs[i].ciphertext) {
                 ok = false;
                 break;
             }
             vecs[i].ciphertext_len = hex_decode(ciphertext->valuestring,
                                                 vecs[i].ciphertext,
-                                                ct_hex_len / 2 + 1);
+                                                (ct_hex_len / 2) + 1);
             vecs[i].expect_success = true;
         } else {
             ok = false;
@@ -709,9 +703,9 @@ static int test_aesgcm256_encryption_json(void) {
 
         uint8_t *ciphertext = NULL;
         size_t ciphertext_len = 0;
-        beb_error_t err = beb_encrypt_with_nonce(
-            v->secret, v->plaintext, v->plaintext_len, v->nonce, &ciphertext,
-            &ciphertext_len);
+        beb_error_t err = beb_encrypt_with_nonce(v->secret, v->plaintext,
+                                                 v->plaintext_len, v->nonce,
+                                                 &ciphertext, &ciphertext_len);
 
         if (!v->expect_success) {
             if (err == BEB_ERROR_OK) {
@@ -728,8 +722,7 @@ static int test_aesgcm256_encryption_json(void) {
         if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: Encryption failed: %s\n",
-                   beb_error_string(err));
+            printf("    FAIL: Encryption failed: %s\n", beb_error_string(err));
             failures++;
             continue;
         }
@@ -743,11 +736,11 @@ static int test_aesgcm256_encryption_json(void) {
             char exp_hex[512];
             size_t n = ciphertext_len < sizeof(got_hex) / 2
                            ? ciphertext_len
-                           : sizeof(got_hex) / 2 - 1;
+                           : (sizeof(got_hex) / 2) - 1;
             hex_encode(ciphertext, n, got_hex);
             n = v->ciphertext_len < sizeof(exp_hex) / 2
                     ? v->ciphertext_len
-                    : sizeof(exp_hex) / 2 - 1;
+                    : (sizeof(exp_hex) / 2) - 1;
             hex_encode(v->ciphertext, n, exp_hex);
             printf("      Got:      %s\n", got_hex);
             printf("      Expected: %s\n", exp_hex);
@@ -758,15 +751,13 @@ static int test_aesgcm256_encryption_json(void) {
 
         uint8_t *decrypted = NULL;
         size_t decrypted_len = 0;
-        err = beb_try_decrypt_aes_gcm_256(ciphertext, ciphertext_len,
-                                             v->secret, v->nonce, &decrypted,
-                                             &decrypted_len);
+        err = beb_try_decrypt_aes_gcm_256(ciphertext, ciphertext_len, v->secret,
+                                          v->nonce, &decrypted, &decrypted_len);
 
         if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: Decryption failed: %s\n",
-                   beb_error_string(err));
+            printf("    FAIL: Decryption failed: %s\n", beb_error_string(err));
             free(ciphertext);
             failures++;
             continue;
@@ -940,7 +931,7 @@ static int load_encryption_secret_vectors(const char *path,
                 break;
             }
             if (hex_decode(istr->valuestring,
-                           vecs[i].individual_secrets + j * 32, 32) != 32) {
+                           vecs[i].individual_secrets + (j * 32), 32) != 32) {
                 ok = false;
                 break;
             }
@@ -976,8 +967,7 @@ static int test_encryption_secret_json(void) {
         enc_secret_vector_t *v = &vecs[i];
 
         uint8_t secret[32];
-        beb_error_t err = beb_decryption_secret(v->keys, v->keys_count,
-                                                      secret);
+        beb_error_t err = beb_decryption_secret(v->keys, v->keys_count, secret);
         if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
@@ -1019,7 +1009,7 @@ static int test_encryption_secret_json(void) {
         bool indiv_err = false;
         for (size_t j = 0; j < v->keys_count; j++) {
             beb_error_t indiv = beb_individual_secret(
-                secret, &v->keys[j], computed + computed_count * 32);
+                secret, &v->keys[j], computed + (computed_count * 32));
             if (indiv != BEB_ERROR_OK) {
                 printf("  Case %zu: %s\n", i + 1,
                        v->description ? v->description : "(no description)");
@@ -1421,8 +1411,8 @@ static int test_encrypted_backup_json(void) {
 
         beb_content_t content;
         size_t content_offset = 0;
-        beb_error_t err = beb_parse_content_metadata(
-            v->content, v->content_len, &content_offset, &content);
+        beb_error_t err = beb_parse_content_metadata(v->content, v->content_len,
+                                                     &content_offset, &content);
         if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
@@ -1448,8 +1438,7 @@ static int test_encrypted_backup_json(void) {
         if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
-            printf("    FAIL: Encryption failed: %s\n",
-                   beb_error_string(err));
+            printf("    FAIL: Encryption failed: %s\n", beb_error_string(err));
             beb_content_free(&content);
             if (paths) {
                 for (size_t d = 0; d < paths_count; d++) {
@@ -1540,8 +1529,7 @@ static int test_encrypted_backup_json(void) {
             if (xor_err != BEB_ERROR_OK) {
                 printf("  Case %zu: %s\n", i + 1,
                        v->description ? v->description : "(no description)");
-                printf("    FAIL: XOR failed: %s\n",
-                       beb_error_string(xor_err));
+                printf("    FAIL: XOR failed: %s\n", beb_error_string(xor_err));
                 beb_decode_v1_result_free(&decode_result);
                 beb_content_free(&content);
                 if (paths) {
@@ -1592,7 +1580,7 @@ static int test_encrypted_backup_json(void) {
         beb_content_t decoded_content;
         size_t offset = 0;
         err = beb_parse_content_metadata(decrypted, decrypted_len, &offset,
-                                            &decoded_content);
+                                         &decoded_content);
         if (err != BEB_ERROR_OK) {
             printf("  Case %zu: %s\n", i + 1,
                    v->description ? v->description : "(no description)");
@@ -1675,8 +1663,8 @@ static int test_content_type_json(void) {
 
         beb_content_t content;
         size_t offset = 0;
-        beb_error_t err = beb_parse_content_metadata(
-            v->content, v->content_len, &offset, &content);
+        beb_error_t err = beb_parse_content_metadata(v->content, v->content_len,
+                                                     &offset, &content);
 
         if (!v->valid) {
             if (err == BEB_ERROR_OK) {
@@ -1734,8 +1722,8 @@ static int test_derivation_path_json(void) {
 
     derivation_path_vector_t *vecs = NULL;
     size_t count = 0;
-    if (load_derivation_path_vectors("test_vectors/derivation_path.json",
-                                     &vecs, &count) != 0) {
+    if (load_derivation_path_vectors("test_vectors/derivation_path.json", &vecs,
+                                     &count) != 0) {
         printf("FAILED (load)\n");
         return 1;
     }
@@ -1755,9 +1743,9 @@ static int test_derivation_path_json(void) {
             }
             for (size_t d = 0; d < paths_count; d++) {
                 if (!parse_derivation_path_string(v->paths[d], &paths[d])) {
-                    printf(
-                        "  Case %zu: %s\n", i + 1,
-                        v->description ? v->description : "(no description)");
+                    printf("  Case %zu: %s\n", i + 1,
+                           v->description ? v->description
+                                          : "(no description)");
                     printf("    FAIL: Could not parse derivation path \"%s\"\n",
                            v->paths[d]);
                     for (size_t j = 0; j <= d; j++) {
@@ -1773,14 +1761,13 @@ static int test_derivation_path_json(void) {
 
         uint8_t *encoded = NULL;
         size_t encoded_len = 0;
-        beb_error_t err = beb_encode_derivation_paths(
-            paths, paths_count, &encoded, &encoded_len);
+        beb_error_t err = beb_encode_derivation_paths(paths, paths_count,
+                                                      &encoded, &encoded_len);
 
         if (!v->expect_success) {
             if (err == BEB_ERROR_OK) {
-                printf(
-                    "  Case %zu: %s\n", i + 1,
-                    v->description ? v->description : "(no description)");
+                printf("  Case %zu: %s\n", i + 1,
+                       v->description ? v->description : "(no description)");
                 printf("    FAIL: expected failure but got success\n");
                 free(encoded);
                 failures++;
@@ -1840,8 +1827,8 @@ static int test_individual_secrets_json(void) {
 
     individual_secrets_vector_t *vecs = NULL;
     size_t count = 0;
-    if (load_individual_secrets_vectors(
-            "test_vectors/individual_secrets.json", &vecs, &count) != 0) {
+    if (load_individual_secrets_vectors("test_vectors/individual_secrets.json",
+                                        &vecs, &count) != 0) {
         printf("FAILED (load)\n");
         return 1;
     }
@@ -1870,9 +1857,8 @@ static int test_individual_secrets_json(void) {
 
         if (!v->expect_success) {
             if (err == BEB_ERROR_OK) {
-                printf(
-                    "  Case %zu: %s\n", i + 1,
-                    v->description ? v->description : "(no description)");
+                printf("  Case %zu: %s\n", i + 1,
+                       v->description ? v->description : "(no description)");
                 printf("    FAIL: expected failure but got success\n");
                 free(encoded);
                 failures++;

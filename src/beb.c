@@ -55,9 +55,15 @@ static bool is_bip341_nums(const beb_pubkey_t *key) {
 
 beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     const beb_derivation_path_t *derivation_paths,
-    size_t derivation_paths_count, const beb_content_t *content_metadata,
-    const beb_pubkey_t *keys, size_t keys_count, const uint8_t *data,
-    size_t data_len, const uint8_t nonce[12], uint8_t **out, size_t *out_len) {
+    size_t derivation_paths_count,
+    const beb_content_t *content_metadata,
+    const beb_pubkey_t *keys,
+    size_t keys_count,
+    const uint8_t *data,
+    size_t data_len,
+    const uint8_t nonce[12],
+    uint8_t **out,
+    size_t *out_len) {
     /* Filter out BIP341 NUMS and duplicates, then sort */
     beb_pubkey_t *filtered_keys = malloc(sizeof(beb_pubkey_t) * keys_count);
     if (!filtered_keys) {
@@ -153,7 +159,7 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     uint8_t *content_bytes = NULL;
     size_t content_len = 0;
     beb_error_t err = beb_encode_content(content_metadata, &content_bytes,
-                                               &content_len);
+                                         &content_len);
     if (err != BEB_ERROR_OK) {
         beb_derivation_paths_free(filtered_paths, filtered_paths_count);
         free(filtered_keys);
@@ -181,8 +187,8 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     beb_secret_t *individual_secrets = NULL;
     size_t individual_secrets_count = 0;
     err = beb_individual_secrets(secret, filtered_keys, filtered_count,
-                                    &individual_secrets,
-                                    &individual_secrets_count);
+                                 &individual_secrets,
+                                 &individual_secrets_count);
     if (err != BEB_ERROR_OK) {
         free(content_bytes);
         beb_derivation_paths_free(filtered_paths, filtered_paths_count);
@@ -194,7 +200,7 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     uint8_t *encoded_paths = NULL;
     size_t encoded_paths_len = 0;
     err = beb_encode_derivation_paths(filtered_paths, filtered_paths_count,
-                                         &encoded_paths, &encoded_paths_len);
+                                      &encoded_paths, &encoded_paths_len);
     if (err != BEB_ERROR_OK) {
         beb_secrets_free(individual_secrets, individual_secrets_count);
         free(content_bytes);
@@ -206,9 +212,9 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     /* Encode individual secrets */
     uint8_t *encoded_secrets = NULL;
     size_t encoded_secrets_len = 0;
-    err = beb_encode_individual_secrets(
-        individual_secrets, individual_secrets_count, &encoded_secrets,
-        &encoded_secrets_len);
+    err = beb_encode_individual_secrets(individual_secrets,
+                                        individual_secrets_count,
+                                        &encoded_secrets, &encoded_secrets_len);
     if (err != BEB_ERROR_OK) {
         free(encoded_paths);
         beb_secrets_free(individual_secrets, individual_secrets_count);
@@ -237,7 +243,7 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     uint8_t *ciphertext = NULL;
     size_t ciphertext_len = 0;
     err = beb_encrypt_with_nonce(secret, payload, payload_len, nonce,
-                                    &ciphertext, &ciphertext_len);
+                                 &ciphertext, &ciphertext_len);
     free(payload);
     if (err != BEB_ERROR_OK) {
         free(encoded_secrets);
@@ -253,8 +259,8 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     uint8_t *encrypted_payload = NULL;
     size_t encrypted_payload_len = 0;
     err = beb_encode_encrypted_payload(nonce, ciphertext, ciphertext_len,
-                                          &encrypted_payload,
-                                          &encrypted_payload_len);
+                                       &encrypted_payload,
+                                       &encrypted_payload_len);
     free(ciphertext);
     if (err != BEB_ERROR_OK) {
         free(encoded_secrets);
@@ -268,8 +274,8 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
 
     /* Encode v1 format */
     err = beb_encode_v1(1, encoded_paths, encoded_paths_len, encoded_secrets,
-                           encoded_secrets_len, 1, encrypted_payload,
-                           encrypted_payload_len, out, out_len);
+                        encoded_secrets_len, 1, encrypted_payload,
+                        encrypted_payload_len, out, out_len);
 
     /* Cleanup */
     free(encrypted_payload);

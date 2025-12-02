@@ -10,8 +10,8 @@
  * Core's crypto/sha256.h */
 
 /* SHA256 using OpenSSL (to be replaced with Bitcoin Core's SHA256) */
-static void sha256_hash(const uint8_t *data, size_t data_len,
-                        uint8_t hash_out[32]) {
+static void
+sha256_hash(const uint8_t *data, size_t data_len, uint8_t hash_out[32]) {
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
     SHA256_Update(&ctx, data, data_len);
@@ -29,8 +29,8 @@ static bool is_bip341_nums(const beb_pubkey_t *key) {
 }
 
 beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
-                                        size_t keys_count,
-                                        uint8_t secret_out[32]) {
+                                  size_t keys_count,
+                                  uint8_t secret_out[32]) {
     if (keys_count == 0) {
         return BEB_ERROR_KEY_COUNT;
     }
@@ -47,7 +47,8 @@ beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
         }
         bool found = false;
         for (size_t j = 0; j < filtered_count; j++) {
-            if (memcmp(filtered_keys[j].data, keys[i].data, sizeof(keys[i].data)) == 0) {
+            if (memcmp(filtered_keys[j].data, keys[i].data,
+                       sizeof(keys[i].data)) == 0) {
                 found = true;
                 break;
             }
@@ -71,7 +72,8 @@ beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
     SHA256_Update(&ctx, decryption_secret, strlen(decryption_secret));
 
     for (size_t i = 0; i < filtered_count; i++) {
-        SHA256_Update(&ctx, filtered_keys[i].data, sizeof(filtered_keys[i].data));
+        SHA256_Update(&ctx, filtered_keys[i].data,
+                      sizeof(filtered_keys[i].data));
     }
 
     free(filtered_keys);
@@ -81,8 +83,8 @@ beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
 }
 
 beb_error_t beb_individual_secret(const uint8_t secret[32],
-                                        const beb_pubkey_t *key,
-                                        uint8_t individual_secret_out[32]) {
+                                  const beb_pubkey_t *key,
+                                  uint8_t individual_secret_out[32]) {
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
 
@@ -101,10 +103,10 @@ beb_error_t beb_individual_secret(const uint8_t secret[32],
 }
 
 beb_error_t beb_individual_secrets(const uint8_t secret[32],
-                                         const beb_pubkey_t *keys,
-                                         size_t keys_count,
-                                         beb_secret_t **secrets_out,
-                                         size_t *secrets_count_out) {
+                                   const beb_pubkey_t *keys,
+                                   size_t keys_count,
+                                   beb_secret_t **secrets_out,
+                                   size_t *secrets_count_out) {
     if (keys_count == 0 || keys_count > 255) {
         return BEB_ERROR_KEY_COUNT;
     }
@@ -116,7 +118,7 @@ beb_error_t beb_individual_secrets(const uint8_t secret[32],
 
     for (size_t i = 0; i < keys_count; i++) {
         beb_error_t err = beb_individual_secret(secret, &keys[i],
-                                                      secrets[i].data);
+                                                secrets[i].data);
         if (err != BEB_ERROR_OK) {
             free(secrets);
             return err;
@@ -129,10 +131,11 @@ beb_error_t beb_individual_secrets(const uint8_t secret[32],
 }
 
 beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
-                                         const uint8_t *data, size_t data_len,
-                                         const uint8_t nonce[12],
-                                         uint8_t **ciphertext_out,
-                                         size_t *ciphertext_len_out) {
+                                   const uint8_t *data,
+                                   size_t data_len,
+                                   const uint8_t nonce[12],
+                                   uint8_t **ciphertext_out,
+                                   size_t *ciphertext_len_out) {
     if (data_len == 0) {
         return BEB_ERROR_EMPTY_BYTES;
     }
@@ -198,11 +201,11 @@ beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
 }
 
 beb_error_t beb_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
-                                              size_t ciphertext_len,
-                                              const uint8_t secret[32],
-                                              const uint8_t nonce[12],
-                                              uint8_t **plaintext_out,
-                                              size_t *plaintext_len_out) {
+                                        size_t ciphertext_len,
+                                        const uint8_t secret[32],
+                                        const uint8_t nonce[12],
+                                        uint8_t **plaintext_out,
+                                        size_t *plaintext_len_out) {
     if (ciphertext_len < 16) {
         return BEB_ERROR_DECRYPT;
     }

@@ -18,3 +18,7 @@ AccessModifierOffset: -4
 
 SortIncludes:         CaseSensitive
 IncludeBlocks:        Preserve
+
+# only one arg per line when fn breaks line
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false

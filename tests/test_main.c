@@ -14,7 +14,7 @@ static size_t hex_decode(const char *hex, uint8_t *out, size_t out_len) {
 
     for (size_t i = 0; i < hex_len / 2; i++) {
         char c1 = hex[i * 2];
-        char c2 = hex[i * 2 + 1];
+        char c2 = hex[(i * 2) + 1];
         uint8_t val = 0;
 
         if (c1 >= '0' && c1 <= '9')
@@ -46,14 +46,14 @@ static void hex_encode(const uint8_t *data, size_t len, char *out) {
     const char hex_chars[] = "0123456789abcdef";
     for (size_t i = 0; i < len; i++) {
         out[i * 2] = hex_chars[(data[i] >> 4) & 0xf];
-        out[i * 2 + 1] = hex_chars[data[i] & 0xf];
+        out[(i * 2) + 1] = hex_chars[data[i] & 0xf];
     }
     out[len * 2] = '\0';
 }
 
 /* Compare two byte arrays */
-static bool bytes_equal(const uint8_t *a, size_t a_len, const uint8_t *b,
-                        size_t b_len) {
+static bool
+bytes_equal(const uint8_t *a, size_t a_len, const uint8_t *b, size_t b_len) {
     if (a_len != b_len)
         return false;
     return memcmp(a, b, a_len) == 0;
@@ -95,8 +95,8 @@ static int test_content_metadata(void) {
     uint8_t none_bytes[] = {0};
     size_t offset;
     beb_content_t content;
-    beb_error_t err = beb_parse_content_metadata(
-        none_bytes, sizeof(none_bytes), &offset, &content);
+    beb_error_t err = beb_parse_content_metadata(none_bytes, sizeof(none_bytes),
+                                                 &offset, &content);
     if (err != BEB_ERROR_OK || content.type != BEB_CONTENT_NONE ||
         offset != 1) {
         printf("  FAIL: None content\n");
@@ -106,7 +106,7 @@ static int test_content_metadata(void) {
     /* Test BIP380 */
     uint8_t bip380_bytes[] = {2, 0x01, 0x7c};
     err = beb_parse_content_metadata(bip380_bytes, sizeof(bip380_bytes),
-                                        &offset, &content);
+                                     &offset, &content);
     if (err != BEB_ERROR_OK || content.type != BEB_CONTENT_BIP380 ||
         offset != 3) {
         printf("  FAIL: BIP380 content\n");
@@ -116,7 +116,7 @@ static int test_content_metadata(void) {
     /* Test proprietary */
     uint8_t prop_bytes[] = {3, 0xde, 0xad, 0xbe};
     err = beb_parse_content_metadata(prop_bytes, sizeof(prop_bytes), &offset,
-                                        &content);
+                                     &content);
     if (err != BEB_ERROR_OK || content.type != BEB_CONTENT_PROPRIETARY ||
         offset != 4) {
         printf("  FAIL: Proprietary content\n");
@@ -139,8 +139,7 @@ static int test_varint(void) {
     size_t offset;
 
     /* Test small value (< 0xfd) */
-    beb_error_t err = beb_varint_encode(0x42, buffer, sizeof(buffer),
-                                              &written);
+    beb_error_t err = beb_varint_encode(0x42, buffer, sizeof(buffer), &written);
     if (err != BEB_ERROR_OK || written != 1 || buffer[0] != 0x42) {
         printf("  FAIL: Small VarInt encode\n");
         return 1;

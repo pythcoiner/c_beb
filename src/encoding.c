@@ -30,10 +30,10 @@ static int compare_secrets(const void *a, const void *b) {
                   ((const beb_secret_t *)b)->data, 32);
 }
 
-beb_error_t
-beb_encode_derivation_paths(const beb_derivation_path_t *paths,
-                               size_t paths_count, uint8_t **out,
-                               size_t *out_len) {
+beb_error_t beb_encode_derivation_paths(const beb_derivation_path_t *paths,
+                                        size_t paths_count,
+                                        uint8_t **out,
+                                        size_t *out_len) {
     if (paths_count > 255) {
         return BEB_ERROR_DERIV_PATH_LENGTH;
     }
@@ -42,14 +42,12 @@ beb_encode_derivation_paths(const beb_derivation_path_t *paths,
     beb_derivation_path_t *paths_copy = NULL;
 
     if (paths_count > 1) {
-        paths_copy =
-            (beb_derivation_path_t *)malloc(sizeof(beb_derivation_path_t) *
-                                            paths_count);
+        paths_copy = (beb_derivation_path_t *)malloc(
+            sizeof(beb_derivation_path_t) * paths_count);
         if (!paths_copy) {
             return BEB_ERROR_DERIV_PATH_COUNT;
         }
-        memcpy(paths_copy, paths,
-               sizeof(beb_derivation_path_t) * paths_count);
+        memcpy(paths_copy, paths, sizeof(beb_derivation_path_t) * paths_count);
         qsort(paths_copy, paths_count, sizeof(beb_derivation_path_t),
               compare_derivation_paths);
         ordered_paths = paths_copy;
@@ -62,7 +60,7 @@ beb_encode_derivation_paths(const beb_derivation_path_t *paths,
             free(paths_copy);
             return BEB_ERROR_DERIV_PATH_LENGTH;
         }
-        total_size += 1;                  /* child count byte */
+        total_size += 1;                          /* child count byte */
         total_size += ordered_paths[i].count * 4; /* 4 bytes per child */
     }
 
@@ -93,9 +91,9 @@ beb_encode_derivation_paths(const beb_derivation_path_t *paths,
 }
 
 beb_error_t beb_encode_individual_secrets(const beb_secret_t *secrets,
-                                                size_t secrets_count,
-                                                uint8_t **out,
-                                                size_t *out_len) {
+                                          size_t secrets_count,
+                                          uint8_t **out,
+                                          size_t *out_len) {
     if (secrets_count == 0) {
         return BEB_ERROR_INDIVIDUAL_SECRETS_EMPTY;
     }
@@ -151,9 +149,10 @@ beb_error_t beb_encode_individual_secrets(const beb_secret_t *secrets,
 }
 
 beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
-                                               const uint8_t *cyphertext,
-                                               size_t cyphertext_len,
-                                               uint8_t **out, size_t *out_len) {
+                                         const uint8_t *cyphertext,
+                                         size_t cyphertext_len,
+                                         uint8_t **out,
+                                         size_t *out_len) {
     if (cyphertext_len == 0) {
         return BEB_ERROR_CYPHERTEXT_EMPTY;
     }
@@ -176,7 +175,7 @@ beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
     /* Encode VarInt */
     size_t written;
     beb_error_t err = beb_varint_encode(cyphertext_len, &result[offset],
-                                              varint_size, &written);
+                                        varint_size, &written);
     if (err != BEB_ERROR_OK) {
         free(result);
         return err;
@@ -192,12 +191,16 @@ beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
     return BEB_ERROR_OK;
 }
 
-beb_error_t
-beb_encode_v1(uint8_t version, const uint8_t *derivation_paths,
-                 size_t deriv_paths_len, const uint8_t *individual_secrets,
-                 size_t individual_secrets_len, uint8_t encryption,
-                 const uint8_t *encrypted_payload, size_t encrypted_payload_len,
-                 uint8_t **out, size_t *out_len) {
+beb_error_t beb_encode_v1(uint8_t version,
+                          const uint8_t *derivation_paths,
+                          size_t deriv_paths_len,
+                          const uint8_t *individual_secrets,
+                          size_t individual_secrets_len,
+                          uint8_t encryption,
+                          const uint8_t *encrypted_payload,
+                          size_t encrypted_payload_len,
+                          uint8_t **out,
+                          size_t *out_len) {
     size_t total_size = BEB_MAGIC_LEN + 1 + deriv_paths_len +
                         individual_secrets_len + 1 + encrypted_payload_len;
 

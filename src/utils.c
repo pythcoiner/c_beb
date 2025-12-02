@@ -63,16 +63,15 @@ const char *beb_error_string(beb_error_t error) {
     }
 }
 
-beb_error_t beb_xor(const uint8_t a[32], const uint8_t b[32],
-                          uint8_t out[32]) {
+beb_error_t beb_xor(const uint8_t a[32], const uint8_t b[32], uint8_t out[32]) {
     for (size_t i = 0; i < 32; i++) {
         out[i] = a[i] ^ b[i];
     }
     return BEB_ERROR_OK;
 }
 
-beb_error_t beb_check_offset(size_t offset, const uint8_t *bytes,
-                                   size_t bytes_len) {
+beb_error_t
+beb_check_offset(size_t offset, const uint8_t *bytes, size_t bytes_len) {
     (void)bytes; /* unused parameter */
     if (bytes_len <= offset) {
         return BEB_ERROR_CORRUPTED;
@@ -81,9 +80,9 @@ beb_error_t beb_check_offset(size_t offset, const uint8_t *bytes,
 }
 
 beb_error_t beb_check_offset_lookahead(size_t offset,
-                                             const uint8_t *bytes,
-                                             size_t bytes_len,
-                                             size_t lookahead) {
+                                       const uint8_t *bytes,
+                                       size_t bytes_len,
+                                       size_t lookahead) {
     (void)bytes; /* unused parameter */
     if (lookahead == 0) {
         return BEB_ERROR_INCREMENT;
@@ -103,8 +102,10 @@ beb_error_t beb_check_offset_lookahead(size_t offset,
     return BEB_ERROR_OK;
 }
 
-beb_error_t beb_init_offset(const uint8_t *bytes, size_t bytes_len,
-                                  size_t value, size_t *out) {
+beb_error_t beb_init_offset(const uint8_t *bytes,
+                            size_t bytes_len,
+                            size_t value,
+                            size_t *out) {
     beb_error_t err = beb_check_offset(value, bytes, bytes_len);
     if (err != BEB_ERROR_OK) {
         return err;
@@ -113,9 +114,11 @@ beb_error_t beb_init_offset(const uint8_t *bytes, size_t bytes_len,
     return BEB_ERROR_OK;
 }
 
-beb_error_t beb_increment_offset(const uint8_t *bytes, size_t bytes_len,
-                                       size_t offset, size_t incr,
-                                       size_t *out) {
+beb_error_t beb_increment_offset(const uint8_t *bytes,
+                                 size_t bytes_len,
+                                 size_t offset,
+                                 size_t incr,
+                                 size_t *out) {
     /* Check for overflow: offset + incr > SIZE_MAX */
     if (incr > SIZE_MAX - offset) {
         return BEB_ERROR_OFFSET_OVERFLOW;
@@ -142,8 +145,10 @@ size_t beb_varint_encode_size(uint64_t value) {
     }
 }
 
-beb_error_t beb_varint_encode(uint64_t value, uint8_t *out,
-                                    size_t out_len, size_t *written) {
+beb_error_t beb_varint_encode(uint64_t value,
+                              uint8_t *out,
+                              size_t out_len,
+                              size_t *written) {
     size_t size = beb_varint_encode_size(value);
     if (out_len < size) {
         return BEB_ERROR_VARINT;
@@ -179,8 +184,10 @@ beb_error_t beb_varint_encode(uint64_t value, uint8_t *out,
     return BEB_ERROR_OK;
 }
 
-beb_error_t beb_varint_decode(const uint8_t *bytes, size_t bytes_len,
-                                    size_t *offset, uint64_t *value) {
+beb_error_t beb_varint_decode(const uint8_t *bytes,
+                              size_t bytes_len,
+                              size_t *offset,
+                              uint64_t *value) {
     if (bytes_len <= *offset) {
         return BEB_ERROR_VARINT;
     }
