@@ -160,8 +160,8 @@ beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
         return BEB_ERROR_ENCRYPT;
     }
 
-    int len;
-    int final_len;
+    int len = 0;
+    int final_len = 0;
 
     /* Encrypt the data */
     if (EVP_EncryptUpdate(ctx, ciphertext, &len, data, (int)data_len) != 1) {
@@ -237,8 +237,8 @@ beb_error_t beb_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
         return BEB_ERROR_DECRYPT;
     }
 
-    int len;
-    int final_len;
+    int len = 0;
+    int final_len = 0;
 
     /* Decrypt the data (excluding the tag) */
     if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext,

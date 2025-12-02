@@ -252,6 +252,7 @@ static int load_content_type_vectors(const char *path,
     return 0;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int load_derivation_path_vectors(const char *path,
                                         derivation_path_vector_t **out_vecs,
                                         size_t *out_count) {
@@ -384,6 +385,7 @@ static int load_derivation_path_vectors(const char *path,
 }
 
 static int
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 load_individual_secrets_vectors(const char *path,
                                 individual_secrets_vector_t **out_vecs,
                                 size_t *out_count) {
@@ -554,6 +556,7 @@ static void free_individual_secrets_vectors(individual_secrets_vector_t *vecs,
     free(vecs);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int load_aesgcm_vectors(const char *path,
                                aesgcm_vector_t **out_vecs,
                                size_t *out_count) {
@@ -686,6 +689,7 @@ static int load_aesgcm_vectors(const char *path,
     return 0;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int test_aesgcm256_encryption_json(void) {
     printf("Testing AES-GCM-256 encryption vectors from JSON... ");
 
@@ -808,6 +812,7 @@ static void free_encryption_secret_vectors(enc_secret_vector_t *vecs,
     free(vecs);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int load_encryption_secret_vectors(const char *path,
                                           enc_secret_vector_t **out_vecs,
                                           size_t *out_count) {
@@ -951,6 +956,7 @@ static int load_encryption_secret_vectors(const char *path,
     return 0;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int test_encryption_secret_json(void) {
     printf("Testing encryption secret vectors from JSON... ");
 
@@ -1097,6 +1103,7 @@ static void free_backup_vectors(backup_vector_t *vecs, size_t count) {
 /* Very small BIP32-style derivation path parser for tests.
  * Supports strings like "m/84'/0'/0'" or "m/0/1'/2/3'".
  */
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int parse_derivation_path_string(const char *s,
                                         beb_derivation_path_t *out) {
     if (!s || !out)
@@ -1192,6 +1199,7 @@ static int parse_derivation_path_string(const char *s,
     return 1;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int load_encrypted_backup_vectors(const char *path,
                                          backup_vector_t **out_vecs,
                                          size_t *out_count) {
@@ -1281,13 +1289,13 @@ static int load_encrypted_backup_vectors(const char *path,
         vecs[i].encryption = (uint8_t)encryption->valuedouble;
 
         size_t content_hex_len = strlen(content->valuestring);
-        vecs[i].content = (uint8_t *)malloc(content_hex_len / 2 + 1);
+        vecs[i].content = (uint8_t *)malloc((content_hex_len / 2) + 1);
         if (!vecs[i].content) {
             ok = false;
             break;
         }
         vecs[i].content_len = hex_decode(content->valuestring, vecs[i].content,
-                                         content_hex_len / 2 + 1);
+                                         (content_hex_len / 2) + 1);
 
         size_t key_count = (size_t)cJSON_GetArraySize(keys);
         vecs[i].keys = (beb_pubkey_t *)calloc(key_count, sizeof(beb_pubkey_t));
@@ -1346,13 +1354,14 @@ static int load_encrypted_backup_vectors(const char *path,
                                        sizeof(vecs[i].nonce));
 
         size_t expected_hex_len = strlen(expected->valuestring);
-        vecs[i].expected = (uint8_t *)malloc(expected_hex_len / 2 + 1);
+        vecs[i].expected = (uint8_t *)malloc((expected_hex_len / 2) + 1);
         if (!vecs[i].expected) {
             ok = false;
             break;
         }
-        vecs[i].expected_len = hex_decode(
-            expected->valuestring, vecs[i].expected, expected_hex_len / 2 + 1);
+        vecs[i].expected_len = hex_decode(expected->valuestring,
+                                          vecs[i].expected,
+                                          (expected_hex_len / 2) + 1);
     }
 
     cJSON_Delete(root);
@@ -1366,6 +1375,7 @@ static int load_encrypted_backup_vectors(const char *path,
     return 0;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int test_encrypted_backup_json(void) {
     printf("Testing encrypted backup vectors from JSON... ");
 
@@ -1646,6 +1656,7 @@ static int test_encrypted_backup_json(void) {
     return failures;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int test_content_type_json(void) {
     printf("Testing content type vectors from JSON... ");
 
@@ -1717,6 +1728,7 @@ static int test_content_type_json(void) {
     return failures;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int test_derivation_path_json(void) {
     printf("Testing derivation path vectors from JSON... ");
 
@@ -1822,6 +1834,7 @@ static int test_derivation_path_json(void) {
     return failures;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static int test_individual_secrets_json(void) {
     printf("Testing individual secrets vectors from JSON... ");
 
@@ -1846,7 +1859,7 @@ static int test_individual_secrets_json(void) {
                 break;
             }
             for (size_t j = 0; j < v->secrets_count; j++) {
-                memcpy(secrets[j].data, v->secrets + j * 32, 32);
+                memcpy(secrets[j].data, v->secrets + (j * 32), 32);
             }
         }
 
@@ -1913,8 +1926,7 @@ int main(void) {
     if (failures == 0) {
         printf("All test vectors PASSED\n");
         return 0;
-    } else {
-        printf("%d test vector suite(s) FAILED\n", failures);
-        return 1;
     }
+    printf("%d test vector suite(s) FAILED\n", failures);
+    return 1;
 }

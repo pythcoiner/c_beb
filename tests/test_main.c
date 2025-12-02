@@ -6,6 +6,7 @@
 #include <string.h>
 
 /* Simple hex decode function */
+// NOLINTNEXTLINE
 static size_t hex_decode(const char *hex, uint8_t *out, size_t out_len) {
     size_t hex_len = strlen(hex);
     if (hex_len % 2 != 0 || hex_len / 2 > out_len) {
@@ -42,6 +43,7 @@ static size_t hex_decode(const char *hex, uint8_t *out, size_t out_len) {
 }
 
 /* Simple hex encode function */
+// NOLINTNEXTLINE
 static void hex_encode(const uint8_t *data, size_t len, char *out) {
     const char hex_chars[] = "0123456789abcdef";
     for (size_t i = 0; i < len; i++) {
@@ -93,7 +95,7 @@ static int test_content_metadata(void) {
 
     /* Test None */
     uint8_t none_bytes[] = {0};
-    size_t offset;
+    size_t offset = 0;
     beb_content_t content;
     beb_error_t err = beb_parse_content_metadata(none_bytes, sizeof(none_bytes),
                                                  &offset, &content);
@@ -134,9 +136,9 @@ static int test_varint(void) {
     printf("Testing VarInt encoding/decoding...\n");
 
     uint8_t buffer[9];
-    size_t written;
-    uint64_t value;
-    size_t offset;
+    size_t written = 0;
+    uint64_t value = 0;
+    size_t offset = 0;
 
     /* Test small value (< 0xfd) */
     beb_error_t err = beb_varint_encode(0x42, buffer, sizeof(buffer), &written);
@@ -170,8 +172,8 @@ static int test_varint(void) {
     return 0;
 }
 
-int main(int argc, char **argv) {
-    printf("BEB LL Test Suite\n");
+int main(int argc, char **argv) { // NOLINT
+    printf("BEB Test Suite\n");
     printf("=================\n\n");
 
     int failures = 0;
@@ -184,8 +186,7 @@ int main(int argc, char **argv) {
     if (failures == 0) {
         printf("All tests PASSED\n");
         return 0;
-    } else {
-        printf("%d test(s) FAILED\n", failures);
-        return 1;
     }
+    printf("%d test(s) FAILED\n", failures);
+    return 1;
 }

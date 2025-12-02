@@ -46,4 +46,7 @@ Diagnostics:
       readability-identifier-length,
       readability-redundant-access-specifiers,
       readability-magic-numbers,
+      modernize-use-using,
+      performance-enum-size,
+      modernize-use-trailing-return-type,
     ]

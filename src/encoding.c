@@ -173,7 +173,7 @@ beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
     offset += 12;
 
     /* Encode VarInt */
-    size_t written;
+    size_t written = 0;
     beb_error_t err = beb_varint_encode(cyphertext_len, &result[offset],
                                         varint_size, &written);
     if (err != BEB_ERROR_OK) {

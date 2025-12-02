@@ -226,7 +226,7 @@ beb_error_t beb_parse_encrypted_payload(const uint8_t *bytes,
     offset += 12;
 
     /* Read VarInt length */
-    uint64_t data_len;
+    uint64_t data_len = 0;
     size_t varint_offset = offset;
     err = beb_varint_decode(bytes, bytes_len, &varint_offset, &data_len);
     if (err != BEB_ERROR_OK) {
@@ -265,13 +265,13 @@ beb_error_t beb_parse_encrypted_payload(const uint8_t *bytes,
 beb_error_t beb_decode_version(const uint8_t *bytes,
                                size_t bytes_len,
                                uint8_t *version_out) {
-    size_t offset;
+    size_t offset = 0;
     beb_error_t err = beb_parse_magic_byte(bytes, bytes_len, &offset);
     if (err != BEB_ERROR_OK) {
         return err;
     }
 
-    size_t version_offset;
+    size_t version_offset = 0;
     return beb_parse_version(&bytes[offset], bytes_len - offset,
                              &version_offset, version_out);
 }
@@ -280,14 +280,14 @@ beb_error_t beb_decode_derivation_paths(const uint8_t *bytes,
                                         size_t bytes_len,
                                         beb_derivation_path_t **paths_out,
                                         size_t *paths_count_out) {
-    size_t offset;
+    size_t offset = 0;
     beb_error_t err = beb_parse_magic_byte(bytes, bytes_len, &offset);
     if (err != BEB_ERROR_OK) {
         return err;
     }
 
-    size_t version_offset;
-    uint8_t version;
+    size_t version_offset = 0;
+    uint8_t version = 0;
     err = beb_parse_version(&bytes[offset], bytes_len - offset, &version_offset,
                             &version);
     if (err != BEB_ERROR_OK) {
@@ -295,7 +295,7 @@ beb_error_t beb_decode_derivation_paths(const uint8_t *bytes,
     }
     offset += version_offset;
 
-    size_t paths_offset;
+    size_t paths_offset = 0;
     return beb_parse_derivation_paths(&bytes[offset], bytes_len - offset,
                                       &paths_offset, paths_out,
                                       paths_count_out);
@@ -306,15 +306,15 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
                           beb_decode_v1_result_t *result_out) {
     memset(result_out, 0, sizeof(beb_decode_v1_result_t));
 
-    size_t offset;
+    size_t offset = 0;
     beb_error_t err = beb_parse_magic_byte(bytes, bytes_len, &offset);
     if (err != BEB_ERROR_OK) {
         return err;
     }
 
     /* Parse version */
-    size_t version_offset;
-    uint8_t version;
+    size_t version_offset = 0;
+    uint8_t version = 0;
     err = beb_parse_version(&bytes[offset], bytes_len - offset, &version_offset,
                             &version);
     if (err != BEB_ERROR_OK) {
@@ -323,7 +323,7 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
     offset += version_offset;
 
     /* Parse derivation paths */
-    size_t deriv_offset;
+    size_t deriv_offset = 0;
     err = beb_parse_derivation_paths(&bytes[offset], bytes_len - offset,
                                      &deriv_offset, &result_out->paths,
                                      &result_out->paths_count);
@@ -333,7 +333,7 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
     offset += deriv_offset;
 
     /* Parse individual secrets */
-    size_t secrets_offset;
+    size_t secrets_offset = 0;
     err = beb_parse_individual_secrets(
         &bytes[offset], bytes_len - offset, &secrets_offset,
         &result_out->individual_secrets, &result_out->secrets_count);
@@ -344,7 +344,7 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
     offset += secrets_offset;
 
     /* Parse encryption */
-    size_t encryption_offset;
+    size_t encryption_offset = 0;
     err = beb_parse_encryption(&bytes[offset], bytes_len - offset,
                                &encryption_offset,
                                &result_out->encryption_type);
@@ -357,7 +357,7 @@ beb_error_t beb_decode_v1(const uint8_t *bytes,
     offset += encryption_offset;
 
     /* Parse encrypted payload */
-    size_t payload_offset;
+    size_t payload_offset = 0;
     err = beb_parse_encrypted_payload(
         &bytes[offset], bytes_len - offset, &payload_offset, result_out->nonce,
         &result_out->cyphertext, &result_out->cyphertext_len);

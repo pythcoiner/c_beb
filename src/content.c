@@ -17,9 +17,11 @@ beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
         content_out->type = BEB_CONTENT_NONE;
         *offset_out = 1;
         return BEB_ERROR_OK;
-    } else if (data_len == 1) {
+    }
+    if (data_len == 1) {
         return BEB_ERROR_CONTENT_METADATA;
-    } else if (data_len == 2) {
+    }
+    if (data_len == 2) {
         /* BIP number */
         if (bytes_len < 3) {
             return BEB_ERROR_CONTENT_METADATA;
@@ -38,28 +40,27 @@ beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
         }
         *offset_out = 3;
         return BEB_ERROR_OK;
-    } else if (data_len == 255) {
-        return BEB_ERROR_CONTENT_RESERVED;
-    } else {
-        /* Proprietary */
-        if (bytes_len < (size_t)data_len + 1) {
-            return BEB_ERROR_CONTENT_METADATA;
-        }
-        size_t end = (size_t)data_len + 1;
-        if (end > bytes_len) {
-            end = bytes_len;
-        }
-
-        content_out->type = BEB_CONTENT_PROPRIETARY;
-        content_out->u.proprietary.len = data_len;
-        content_out->u.proprietary.data = malloc(data_len);
-        if (!content_out->u.proprietary.data) {
-            return BEB_ERROR_CONTENT_METADATA;
-        }
-        memcpy(content_out->u.proprietary.data, &bytes[1], data_len);
-        *offset_out = end;
-        return BEB_ERROR_OK;
     }
+    if (data_len == 255) {
+        return BEB_ERROR_CONTENT_RESERVED;
+    } /* Proprietary */
+    if (bytes_len < (size_t)data_len + 1) {
+        return BEB_ERROR_CONTENT_METADATA;
+    }
+    size_t end = (size_t)data_len + 1;
+    if (end > bytes_len) {
+        end = bytes_len;
+    }
+
+    content_out->type = BEB_CONTENT_PROPRIETARY;
+    content_out->u.proprietary.len = data_len;
+    content_out->u.proprietary.data = malloc(data_len);
+    if (!content_out->u.proprietary.data) {
+        return BEB_ERROR_CONTENT_METADATA;
+    }
+    memcpy(content_out->u.proprietary.data, &bytes[1], data_len);
+    *offset_out = end;
+    return BEB_ERROR_OK;
 }
 
 beb_error_t beb_encode_content(const beb_content_t *content,
@@ -82,7 +83,7 @@ beb_error_t beb_encode_content(const beb_content_t *content,
     case BEB_CONTENT_BIP388:
     case BEB_CONTENT_BIP329:
     case BEB_CONTENT_BIP: {
-        uint16_t bip_number;
+        uint16_t bip_number = 0;
         if (content->type == BEB_CONTENT_BIP380) {
             bip_number = 380;
         } else if (content->type == BEB_CONTENT_BIP388) {
