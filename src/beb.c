@@ -53,7 +53,8 @@ static bool is_bip341_nums(const beb_pubkey_t *key) {
     return memcmp(key->data, BEB_BIP341_NUMS_PUBKEY, 33) == 0;
 }
 
-/* Prepare and sort recipient keys: filter BIP341 NUMS, deduplicate, enforce limits */
+/* Prepare and sort recipient keys: filter BIP341 NUMS, deduplicate, enforce
+ * limits */
 static beb_error_t beb_prepare_keys(const beb_pubkey_t *keys,
                                     size_t keys_count,
                                     beb_pubkey_t **out_keys,
@@ -91,51 +92,78 @@ static beb_error_t beb_prepare_keys(const beb_pubkey_t *keys,
     return BEB_ERROR_OK;
 }
 
+/* Internal: check if a path is already present in the filtered set */
+static bool
+beb_derivation_path_is_duplicate(const beb_derivation_path_t *filtered_paths,
+                                 size_t filtered_paths_count,
+                                 const beb_derivation_path_t *candidate) {
+    for (size_t i = 0; i < filtered_paths_count; i++) {
+        if (filtered_paths[i].count == candidate->count &&
+            memcmp(filtered_paths[i].children, candidate->children,
+                   sizeof(uint32_t) * candidate->count) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Internal: copy a derivation path (count + children array) into dst */
+static beb_error_t beb_derivation_path_copy(beb_derivation_path_t *dst,
+                                            const beb_derivation_path_t *src) {
+    dst->count = src->count;
+    dst->children = malloc(sizeof(uint32_t) * src->count);
+    if (!dst->children) {
+        return BEB_ERROR_DERIV_PATH_COUNT;
+    }
+
+    memcpy(dst->children, src->children, sizeof(uint32_t) * src->count);
+    return BEB_ERROR_OK;
+}
+
 /* Prepare derivation paths: deduplicate and copy children, enforce limits */
 static beb_error_t
 beb_prepare_derivation_paths(const beb_derivation_path_t *derivation_paths,
                              size_t derivation_paths_count,
                              beb_derivation_path_t **out_paths,
                              size_t *out_count) {
-    beb_derivation_path_t *filtered_paths = NULL;
+    *out_paths = NULL;
+    *out_count = 0;
+
+    /* Fast path: no input derivation paths */
+    if (derivation_paths_count == 0) {
+        return BEB_ERROR_OK;
+    }
+
+    beb_derivation_path_t *filtered_paths = malloc(
+        sizeof(beb_derivation_path_t) * derivation_paths_count);
+    if (!filtered_paths) {
+        return BEB_ERROR_DERIV_PATH_COUNT;
+    }
+
     size_t filtered_paths_count = 0;
 
-    if (derivation_paths_count > 0) {
-        filtered_paths = malloc(sizeof(beb_derivation_path_t) *
-                                derivation_paths_count);
-        if (!filtered_paths) {
-            return BEB_ERROR_DERIV_PATH_COUNT;
+    for (size_t i = 0; i < derivation_paths_count; i++) {
+        const beb_derivation_path_t *candidate = &derivation_paths[i];
+
+        /* Skip if this path is already present */
+        if (beb_derivation_path_is_duplicate(filtered_paths,
+                                             filtered_paths_count, candidate)) {
+            continue;
         }
 
-        for (size_t i = 0; i < derivation_paths_count; i++) {
-            bool found = false;
-            for (size_t j = 0; j < filtered_paths_count; j++) {
-                if (filtered_paths[j].count == derivation_paths[i].count &&
-                    memcmp(filtered_paths[j].children,
-                           derivation_paths[i].children,
-                           sizeof(uint32_t) * derivation_paths[i].count) == 0) {
-                    found = true;
-                    break;
-                }
+        /* Copy path (count + children array) into filtered set */
+        beb_error_t err = beb_derivation_path_copy(
+            &filtered_paths[filtered_paths_count], candidate);
+        if (err != BEB_ERROR_OK) {
+            /* Free already allocated paths and their children */
+            for (size_t k = 0; k < filtered_paths_count; k++) {
+                free(filtered_paths[k].children);
             }
-            if (!found) {
-                filtered_paths[filtered_paths_count].count =
-                    derivation_paths[i].count;
-                filtered_paths[filtered_paths_count].children = malloc(
-                    sizeof(uint32_t) * derivation_paths[i].count);
-                if (!filtered_paths[filtered_paths_count].children) {
-                    for (size_t k = 0; k < filtered_paths_count; k++) {
-                        free(filtered_paths[k].children);
-                    }
-                    free(filtered_paths);
-                    return BEB_ERROR_DERIV_PATH_COUNT;
-                }
-                memcpy(filtered_paths[filtered_paths_count].children,
-                       derivation_paths[i].children,
-                       sizeof(uint32_t) * derivation_paths[i].count);
-                filtered_paths_count++;
-            }
+            free(filtered_paths);
+            return err;
         }
+
+        filtered_paths_count++;
     }
 
     if (filtered_paths_count > 255) {
@@ -155,8 +183,7 @@ static beb_error_t beb_encode_content_checked(const beb_content_t *content,
     uint8_t *content_bytes = NULL;
     size_t content_len = 0;
 
-    beb_error_t err =
-        beb_encode_content(content, &content_bytes, &content_len);
+    beb_error_t err = beb_encode_content(content, &content_bytes, &content_len);
     if (err != BEB_ERROR_OK) {
         return err;
     }
@@ -207,9 +234,8 @@ beb_encode_paths_and_secrets(const beb_derivation_path_t *paths,
                              size_t *out_secrets_len) {
     uint8_t *encoded_paths = NULL;
     size_t encoded_paths_len = 0;
-    beb_error_t err = beb_encode_derivation_paths(paths, paths_count,
-                                                  &encoded_paths,
-                                                  &encoded_paths_len);
+    beb_error_t err = beb_encode_derivation_paths(
+        paths, paths_count, &encoded_paths, &encoded_paths_len);
     if (err != BEB_ERROR_OK) {
         return err;
     }
@@ -252,9 +278,8 @@ beb_build_and_encrypt_payload(const uint8_t secret[32],
 
     uint8_t *ciphertext = NULL;
     size_t ciphertext_len = 0;
-    beb_error_t err = beb_encrypt_with_nonce(secret, payload, payload_len,
-                                             nonce, &ciphertext,
-                                             &ciphertext_len);
+    beb_error_t err = beb_encrypt_with_nonce(
+        secret, payload, payload_len, nonce, &ciphertext, &ciphertext_len);
     free(payload);
     if (err != BEB_ERROR_OK) {
         return err;
@@ -323,9 +348,8 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     }
 
     /* Deduplicate and copy derivation paths, enforcing path-count limits */
-    err = beb_prepare_derivation_paths(derivation_paths,
-                                       derivation_paths_count, &filtered_paths,
-                                       &filtered_paths_count);
+    err = beb_prepare_derivation_paths(derivation_paths, derivation_paths_count,
+                                       &filtered_paths, &filtered_paths_count);
     if (err != BEB_ERROR_OK) {
         goto cleanup;
     }
@@ -344,7 +368,8 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
         goto cleanup;
     }
 
-    /* Encode derivation paths and individual secrets for inclusion in v1 blob */
+    /* Encode derivation paths and individual secrets for inclusion in v1 blob
+     */
     err = beb_encode_paths_and_secrets(
         filtered_paths, filtered_paths_count, individual_secrets,
         individual_secrets_count, &encoded_paths, &encoded_paths_len,
@@ -354,10 +379,9 @@ beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     }
 
     /* Build (content || data), encrypt with AES-GCM and encode with nonce */
-    err = beb_build_and_encrypt_payload(secret, content_bytes, content_len,
-                                        data, data_len, nonce,
-                                        &encrypted_payload,
-                                        &encrypted_payload_len);
+    err = beb_build_and_encrypt_payload(
+        secret, content_bytes, content_len, data, data_len, nonce,
+        &encrypted_payload, &encrypted_payload_len);
     if (err != BEB_ERROR_OK) {
         goto cleanup;
     }
