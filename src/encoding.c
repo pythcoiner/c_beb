@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Comparison function prototypes */
 static int compare_derivation_paths(const void *a, const void *b);
 static int compare_secrets(const void *a, const void *b);
 
+/* Compare two derivation paths lexicographically by their children. */
 static int compare_derivation_paths(const void *a, const void *b) {
     const beb_derivation_path_t *pa = (const beb_derivation_path_t *)a;
     const beb_derivation_path_t *pb = (const beb_derivation_path_t *)b;
@@ -25,11 +25,13 @@ static int compare_derivation_paths(const void *a, const void *b) {
     return 0;
 }
 
+/* Compare two individual secrets lexicographically by their 32-byte value. */
 static int compare_secrets(const void *a, const void *b) {
     return memcmp(((const beb_secret_t *)a)->data,
                   ((const beb_secret_t *)b)->data, 32);
 }
 
+/* Encode an ordered list of derivation paths into the compact v1 format. */
 beb_error_t beb_encode_derivation_paths(const beb_derivation_path_t *paths,
                                         size_t paths_count,
                                         uint8_t **out,
@@ -90,6 +92,7 @@ beb_error_t beb_encode_derivation_paths(const beb_derivation_path_t *paths,
     return BEB_ERROR_OK;
 }
 
+/* Encode individual secrets, de-duplicating and prefixing with a count byte. */
 beb_error_t beb_encode_individual_secrets(const beb_secret_t *secrets,
                                           size_t secrets_count,
                                           uint8_t **out,
@@ -148,6 +151,7 @@ beb_error_t beb_encode_individual_secrets(const beb_secret_t *secrets,
     return BEB_ERROR_OK;
 }
 
+/* Encode nonce, ciphertext length (VarInt), and ciphertext into v1 payload. */
 beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
                                          const uint8_t *cyphertext,
                                          size_t cyphertext_len,
@@ -191,6 +195,8 @@ beb_error_t beb_encode_encrypted_payload(const uint8_t nonce[12],
     return BEB_ERROR_OK;
 }
 
+/* Assemble the complete BEB v1 container from encoded paths, secrets and
+ * payload. */
 beb_error_t beb_encode_v1(uint8_t version,
                           const uint8_t *derivation_paths,
                           size_t deriv_paths_len,

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Parse backup content metadata prefix into a beb_content_t, updating
+ * offset_out. */
 beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
                                        size_t bytes_len,
                                        size_t *offset_out,
@@ -63,6 +65,7 @@ beb_error_t beb_parse_content_metadata(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Encode a beb_content_t into its compact serialized representation. */
 beb_error_t beb_encode_content(const beb_content_t *content,
                                uint8_t **out,
                                size_t *out_len) {
@@ -140,6 +143,7 @@ void beb_content_free(beb_content_t *content) {
     }
 }
 
+/* Return true if content represents a known BIP-defined content type. */
 bool beb_content_is_known(const beb_content_t *content) {
     switch (content->type) {
     case BEB_CONTENT_BIP380:

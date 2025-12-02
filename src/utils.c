@@ -8,6 +8,7 @@
 #define SIZE_MAX ((size_t)-1)
 #endif
 
+/* Map a beb_error_t code to a stable human-readable string. */
 const char *beb_error_string(beb_error_t error) {
     switch (error) {
     case BEB_ERROR_OK:
@@ -70,6 +71,7 @@ beb_error_t beb_xor(const uint8_t a[32], const uint8_t b[32], uint8_t out[32]) {
     return BEB_ERROR_OK;
 }
 
+/* Ensure that offset is a valid index into bytes. */
 beb_error_t
 beb_check_offset(size_t offset, const uint8_t *bytes, size_t bytes_len) {
     (void)bytes; /* unused parameter */
@@ -79,6 +81,7 @@ beb_check_offset(size_t offset, const uint8_t *bytes, size_t bytes_len) {
     return BEB_ERROR_OK;
 }
 
+/* Ensure that offset + lookahead - 1 remains within bytes. */
 beb_error_t beb_check_offset_lookahead(size_t offset,
                                        const uint8_t *bytes,
                                        size_t bytes_len,
@@ -102,6 +105,7 @@ beb_error_t beb_check_offset_lookahead(size_t offset,
     return BEB_ERROR_OK;
 }
 
+/* Initialize a checked offset into bytes from an arbitrary value. */
 beb_error_t beb_init_offset(const uint8_t *bytes,
                             size_t bytes_len,
                             size_t value,
@@ -114,6 +118,7 @@ beb_error_t beb_init_offset(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Safely advance an existing offset by incr within bytes. */
 beb_error_t beb_increment_offset(const uint8_t *bytes,
                                  size_t bytes_len,
                                  size_t offset,
@@ -132,7 +137,7 @@ beb_error_t beb_increment_offset(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
-/* VarInt encoding/decoding (Bitcoin consensus format) */
+/* VarInt encoding/decoding (Bitcoin consensus format). */
 size_t beb_varint_encode_size(uint64_t value) {
     if (value < 0xfd) {
         return 1;

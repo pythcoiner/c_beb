@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Validate the BEB magic prefix at the start of an encoded buffer. */
 beb_error_t beb_parse_magic_byte(const uint8_t *bytes,
                                  size_t bytes_len,
                                  size_t *offset_out) {
@@ -19,6 +20,7 @@ beb_error_t beb_parse_magic_byte(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Parse and validate the version byte from the given buffer. */
 beb_error_t beb_parse_version(const uint8_t *bytes,
                               size_t bytes_len,
                               size_t *offset_out,
@@ -38,6 +40,7 @@ beb_error_t beb_parse_version(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Parse the encryption type byte from the given buffer. */
 beb_error_t beb_parse_encryption(const uint8_t *bytes,
                                  size_t bytes_len,
                                  size_t *offset_out,
@@ -51,7 +54,7 @@ beb_error_t beb_parse_encryption(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
-/* Free an array of derivation paths and their children arrays */
+/* Free an array of derivation paths and their children arrays. */
 static void beb_free_parsed_paths(beb_derivation_path_t *paths,
                                   size_t paths_count) {
     if (!paths) {
@@ -63,12 +66,12 @@ static void beb_free_parsed_paths(beb_derivation_path_t *paths,
     free(paths);
 }
 
-/* Parse a single derivation path at the given offset */
-static beb_error_t beb_parse_single_derivation_path(
-    const uint8_t *bytes,
-    size_t bytes_len,
-    size_t *offset,
-    beb_derivation_path_t *out_path) {
+/* Parse a single derivation path at the given offset into out_path. */
+static beb_error_t
+beb_parse_single_derivation_path(const uint8_t *bytes,
+                                 size_t bytes_len,
+                                 size_t *offset,
+                                 beb_derivation_path_t *out_path) {
     beb_error_t err = beb_check_offset(*offset, bytes, bytes_len);
     if (err != BEB_ERROR_OK) {
         return err;
@@ -105,6 +108,8 @@ static beb_error_t beb_parse_single_derivation_path(
     return BEB_ERROR_OK;
 }
 
+/* Parse and allocate all derivation paths starting at the beginning of bytes.
+ */
 beb_error_t beb_parse_derivation_paths(const uint8_t *bytes,
                                        size_t bytes_len,
                                        size_t *offset_out,
@@ -164,6 +169,7 @@ error:
     return err;
 }
 
+/* Parse and de-duplicate individual secrets from the encoded buffer. */
 beb_error_t beb_parse_individual_secrets(const uint8_t *bytes,
                                          size_t bytes_len,
                                          size_t *offset_out,
@@ -225,6 +231,7 @@ beb_error_t beb_parse_individual_secrets(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Parse nonce, ciphertext length and bytes from an encrypted payload. */
 beb_error_t beb_parse_encrypted_payload(const uint8_t *bytes,
                                         size_t bytes_len,
                                         size_t *offset_out,
@@ -282,6 +289,7 @@ beb_error_t beb_parse_encrypted_payload(const uint8_t *bytes,
     return BEB_ERROR_OK;
 }
 
+/* Decode just the version field from a full BEB-encoded blob. */
 beb_error_t beb_decode_version(const uint8_t *bytes,
                                size_t bytes_len,
                                uint8_t *version_out) {
@@ -296,6 +304,7 @@ beb_error_t beb_decode_version(const uint8_t *bytes,
                              &version_offset, version_out);
 }
 
+/* Decode only the derivation paths section from a full BEB-encoded blob. */
 beb_error_t beb_decode_derivation_paths(const uint8_t *bytes,
                                         size_t bytes_len,
                                         beb_derivation_path_t **paths_out,
@@ -321,6 +330,7 @@ beb_error_t beb_decode_derivation_paths(const uint8_t *bytes,
                                       paths_count_out);
 }
 
+/* Fully decode a BEB v1-encoded blob into a beb_decode_v1_result_t. */
 beb_error_t beb_decode_v1(const uint8_t *bytes,
                           size_t bytes_len,
                           beb_decode_v1_result_t *result_out) {

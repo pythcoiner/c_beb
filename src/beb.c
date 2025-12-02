@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Memory management functions */
 void beb_derivation_paths_free(beb_derivation_path_t *paths, size_t count) {
     if (paths) {
         for (size_t i = 0; i < count; i++) {
@@ -36,19 +35,18 @@ void beb_decrypt_result_free(beb_decrypt_result_t *result) {
     }
 }
 
-/* Comparison function for pubkeys */
+/* Compare two recipient pubkeys lexicographically by their 33-byte encoding. */
 static int compare_pubkeys(const void *a, const void *b) {
     return memcmp(((const beb_pubkey_t *)a)->data,
                   ((const beb_pubkey_t *)b)->data, 33);
 }
 
-/* Check if pubkey is BIP341 NUMS point */
 static bool is_bip341_nums(const beb_pubkey_t *key) {
     return memcmp(key->data, BEB_BIP341_NUMS_PUBKEY, 33) == 0;
 }
 
 /* Prepare and sort recipient keys: filter BIP341 NUMS, deduplicate, enforce
- * limits */
+ * limits. */
 static beb_error_t beb_prepare_keys(const beb_pubkey_t *keys,
                                     size_t keys_count,
                                     beb_pubkey_t **out_keys,
@@ -86,7 +84,6 @@ static beb_error_t beb_prepare_keys(const beb_pubkey_t *keys,
     return BEB_ERROR_OK;
 }
 
-/* Internal: check if a path is already present in the filtered set */
 static bool
 beb_derivation_path_is_duplicate(const beb_derivation_path_t *filtered_paths,
                                  size_t filtered_paths_count,
@@ -101,7 +98,6 @@ beb_derivation_path_is_duplicate(const beb_derivation_path_t *filtered_paths,
     return false;
 }
 
-/* Internal: copy a derivation path (count + children array) into dst */
 static beb_error_t beb_derivation_path_copy(beb_derivation_path_t *dst,
                                             const beb_derivation_path_t *src) {
     dst->count = src->count;
@@ -114,7 +110,8 @@ static beb_error_t beb_derivation_path_copy(beb_derivation_path_t *dst,
     return BEB_ERROR_OK;
 }
 
-/* Prepare derivation paths: deduplicate and copy children, enforce limits */
+/* Prepare derivation paths: deduplicate, deep-copy children, and enforce
+ * limits. */
 static beb_error_t
 beb_prepare_derivation_paths(const beb_derivation_path_t *derivation_paths,
                              size_t derivation_paths_count,
@@ -170,7 +167,7 @@ beb_prepare_derivation_paths(const beb_derivation_path_t *derivation_paths,
     return BEB_ERROR_OK;
 }
 
-/* Encode content and ensure it is non-empty */
+/* Encode content metadata and fail if the encoded representation is empty. */
 static beb_error_t beb_encode_content_checked(const beb_content_t *content,
                                               uint8_t **out_bytes,
                                               size_t *out_len) {
@@ -192,7 +189,7 @@ static beb_error_t beb_encode_content_checked(const beb_content_t *content,
     return BEB_ERROR_OK;
 }
 
-/* Compute shared decryption secret and individual secrets */
+/* Compute shared decryption secret and per-recipient individual secrets. */
 static beb_error_t beb_compute_secrets(const beb_pubkey_t *keys,
                                        size_t keys_count,
                                        uint8_t secret[32],
@@ -216,7 +213,8 @@ static beb_error_t beb_compute_secrets(const beb_pubkey_t *keys,
     return BEB_ERROR_OK;
 }
 
-/* Encode derivation paths and individual secrets */
+/* Encode derivation paths and individual secrets into their serialized
+ * representations. */
 static beb_error_t
 beb_encode_paths_and_secrets(const beb_derivation_path_t *paths,
                              size_t paths_count,
@@ -251,7 +249,8 @@ beb_encode_paths_and_secrets(const beb_derivation_path_t *paths,
     return BEB_ERROR_OK;
 }
 
-/* Build payload (content || data), encrypt, and encode with nonce */
+/* Build (content || data), encrypt it, and wrap it into the v1 encrypted
+ * payload format. */
 static beb_error_t
 beb_build_and_encrypt_payload(const uint8_t secret[32],
                               const uint8_t *content_bytes,
@@ -294,6 +293,8 @@ beb_build_and_encrypt_payload(const uint8_t secret[32],
     return BEB_ERROR_OK;
 }
 
+/* High-level entry point to create a BEB v1 backup using AES-GCM-256 and an
+ * explicit nonce. */
 beb_error_t beb_encrypt_aes_gcm_256_v1_with_nonce(
     const beb_derivation_path_t *derivation_paths,
     size_t derivation_paths_count,
@@ -403,5 +404,3 @@ cleanup:
 
     return err;
 }
-
-

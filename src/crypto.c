@@ -10,6 +10,7 @@
  * the bundled secp256k1 subrepository. */
 #include "../secp256k1/src/hash_impl.h"
 
+/* Compare two compressed pubkeys lexicographically. */
 static int compare_pubkeys(const void *a, const void *b) {
     return memcmp(((const beb_pubkey_t *)a)->data,
                   ((const beb_pubkey_t *)b)->data,
@@ -20,6 +21,8 @@ static bool is_bip341_nums(const beb_pubkey_t *key) {
     return memcmp(key->data, BEB_BIP341_NUMS_PUBKEY, sizeof(key->data)) == 0;
 }
 
+/* Derive the shared 32-byte decryption secret from a list of recipient pubkeys.
+ */
 beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
                                   size_t keys_count,
                                   uint8_t secret_out[32]) {
@@ -61,13 +64,11 @@ beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
     const char *decryption_secret = BEB_DECRYPTION_SECRET;
 
     secp256k1_sha256_initialize(&ctx);
-    secp256k1_sha256_write(&ctx,
-                           (const unsigned char *)decryption_secret,
+    secp256k1_sha256_write(&ctx, (const unsigned char *)decryption_secret,
                            strlen(decryption_secret));
 
     for (size_t i = 0; i < filtered_count; i++) {
-        secp256k1_sha256_write(&ctx,
-                               filtered_keys[i].data,
+        secp256k1_sha256_write(&ctx, filtered_keys[i].data,
                                sizeof(filtered_keys[i].data));
     }
 
@@ -78,6 +79,7 @@ beb_error_t beb_decryption_secret(const beb_pubkey_t *keys,
     return BEB_ERROR_OK;
 }
 
+/* Derive a per-recipient secret for a single pubkey from the shared secret. */
 beb_error_t beb_individual_secret(const uint8_t secret[32],
                                   const beb_pubkey_t *key,
                                   uint8_t individual_secret_out[32]) {
@@ -88,8 +90,7 @@ beb_error_t beb_individual_secret(const uint8_t secret[32],
     secp256k1_sha256_initialize(&ctx);
 
     /* Hash the constant string */
-    secp256k1_sha256_write(&ctx,
-                           (const unsigned char *)individual_secret,
+    secp256k1_sha256_write(&ctx, (const unsigned char *)individual_secret,
                            strlen(individual_secret));
 
     /* Hash the key */
@@ -102,6 +103,7 @@ beb_error_t beb_individual_secret(const uint8_t secret[32],
     return beb_xor(secret, si, individual_secret_out);
 }
 
+/* Derive per-recipient secrets for all given pubkeys. */
 beb_error_t beb_individual_secrets(const uint8_t secret[32],
                                    const beb_pubkey_t *keys,
                                    size_t keys_count,
@@ -130,6 +132,7 @@ beb_error_t beb_individual_secrets(const uint8_t secret[32],
     return BEB_ERROR_OK;
 }
 
+/* Encrypt data with AES-GCM-256 using the provided secret and 96-bit nonce. */
 beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
                                    const uint8_t *data,
                                    size_t data_len,
@@ -200,6 +203,8 @@ beb_error_t beb_encrypt_with_nonce(const uint8_t secret[32],
     return BEB_ERROR_OK;
 }
 
+/* Try to decrypt AES-GCM-256 ciphertext; fail with
+ * BEB_ERROR_DECRYPT/EMPTY_BYTES on error. */
 beb_error_t beb_try_decrypt_aes_gcm_256(const uint8_t *ciphertext,
                                         size_t ciphertext_len,
                                         const uint8_t secret[32],

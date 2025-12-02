@@ -1526,9 +1526,7 @@ static int test_encrypted_backup_json(void) {
         secp256k1_sha256_write(&ctx,
                                (const unsigned char *)BEB_INDIVIDUAL_SECRET,
                                strlen(BEB_INDIVIDUAL_SECRET));
-        secp256k1_sha256_write(&ctx,
-                               v->keys[0].data,
-                               sizeof(v->keys[0].data));
+        secp256k1_sha256_write(&ctx, v->keys[0].data, sizeof(v->keys[0].data));
         secp256k1_sha256_finalize(&ctx, si);
         secp256k1_sha256_clear(&ctx);
 
